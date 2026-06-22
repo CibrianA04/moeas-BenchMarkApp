@@ -1,0 +1,10 @@
+# Dependencias de la MAQUETA en capas (solo UI, sin logica de calculo).
+streamlit>=1.58     # capa de presentacion (usa la API moderna width="stretch")
+numpy>=1.24         # datos de ejemplo / arreglos
+pandas>=2.0         # tablas
+matplotlib>=3.8     # motor UNICO de graficas (headless, backend Agg)
+jinja2>=3.1         # requerido por el Styler de pandas (tablas resaltadas)
+
+# FUTURO (aun sin logica; no se importan todavia, no son necesarios para correr):
+# scipy>=1.11       # pruebas estadisticas (Wilcoxon, Mann-Whitney, Friedman)
+# pymoo>=0.6        # backend de Hypervolume (interfaz lista para binario en C)
