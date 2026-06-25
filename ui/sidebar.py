@@ -14,7 +14,6 @@ from . import state
 def render() -> None:
     with st.sidebar:
         st.markdown("## BenchMark-MOEAs")
-        st.caption("Maqueta de interfaz · Estancia Delfin · CICESE")
         st.divider()
 
         # ── Proyecto (persistencia futura en SQLite) ───────────────────────────
@@ -28,7 +27,7 @@ def render() -> None:
             st.toast(services.cargar_proyecto())   # devuelve mensaje FUTURO
         if c3.button("Guardar", width="stretch"):
             st.toast(services.guardar_proyecto(None))
-        st.caption("FUTURO: cargar/guardar el proyecto completo en SQLite.")
+        st.caption("cargar/guardar el proyecto completo en SQLite.")
 
         st.divider()
 

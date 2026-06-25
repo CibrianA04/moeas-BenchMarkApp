@@ -15,16 +15,14 @@ from .. import components, state
 def render() -> None:
     st.subheader("Paso 1 · Carga y organizacion de datos")
     st.caption(
-        "Se cargan las aproximaciones al frente de Pareto (PFA). La app NO "
-        "ejecuta MOEAs: solo evalua y visualiza resultados ya generados."
-    )
-    st.info(
-        "Modelo: cada MOEA se prueba en varios MOP; por cada MOP hay varias "
-        "CORRIDAS; cada corrida produce un PFA. Unidad de carga = 1 CSV por PFA "
-        "= N filas (puntos) x m columnas (objetivos)."
-    )
+        "Se cargan las aproximaciones al frente de Pareto (PFA). ")
+#   st.info(
+#     "Modelo: cada MOEA se prueba en varios MOP; por cada MOP hay varias "
+#     "CORRIDAS; cada corrida produce un PFA. Unidad de carga = 1 CSV por PFA "
+#     "= N filas (puntos) x m columnas (objetivos)."
+# )
 
-    col_izq, col_der = st.columns([1.1, 1], gap="large")
+    col_izq, col_der = st.columns([1.1, 1], gap="large") 
 
     with col_izq:
         st.markdown("#### 1) Subir archivos de PFA")

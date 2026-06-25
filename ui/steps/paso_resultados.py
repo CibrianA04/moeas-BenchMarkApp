@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Paso 3 · RESULTADOS: tabla por indicador (mejor media resaltada), pruebas
-estadisticas por escenario y exportacion (CSV / LaTeX). Datos de EJEMPLO.
+estadisticas por escenario y exportacion (CSV / LaTeX).
 """
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from .. import components, state
 
 def render() -> None:
     st.subheader("Paso 3 · Resultados y tablas")
-    st.caption("UNA tabla por indicador (no se mezclan). La mejor media de cada "
+    st.caption("UNA tabla por indicador. La mejor media de cada "
                "fila se resaltara; debajo, pruebas estadisticas por escenario.")
 
     nombres = {m.id: m.nombre for m in indicators.CATALOGO.values()}
@@ -23,15 +23,11 @@ def render() -> None:
     c1, c2 = st.columns([2, 1])
     ind_id = c1.selectbox("Indicador", elegidos, format_func=lambda i: nombres[i])
     meta = indicators.CATALOGO[ind_id]
-    c2.metric("Sentido", "MAX (mayor mejor)" if meta.sentido == "max"
-              else "MIN (menor mejor)")
 
     if meta.compliance == "no":
-        st.warning("Indicador NO Pareto-compliant: interpretar con cautela "
-                   "(no permite conclusiones fuertes).")
+        st.warning("Indicador NO Pareto-compliant ")
     else:
-        st.success(f"Pareto-compliant ({meta.compliance}): permite conclusiones "
-                   "fuertes.")
+        st.success(f"Pareto-compliant ({meta.compliance}) ")
 
     # ── Tabla (la construira domain/tables.py cuando haya datos) ───────────────
     components.placeholder(

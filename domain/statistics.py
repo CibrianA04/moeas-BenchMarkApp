@@ -21,7 +21,7 @@ PRUEBA_POR_ESCENARIO = {
 
 
 def agregar(valores) -> tuple[float, float]:
-    """Devuelve (media, desviacion estandar) sobre las corridas. Trivial y seguro."""
+    """Devuelve (media, desviacion estandar) sobre las corridas."""
     a = np.asarray(list(valores), dtype=float)
     if a.size == 0:
         return float("nan"), float("nan")

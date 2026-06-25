@@ -45,7 +45,7 @@ class MapeoArchivo:
     mop: str
     m: int
     corrida: int
-
+ 
 
 @dataclass
 class Proyecto:

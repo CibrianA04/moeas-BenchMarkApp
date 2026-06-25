@@ -29,20 +29,20 @@ class MetaIndicador:
 # Catalogo. Punto de EXTENSION: agregar un indicador = agregar una entrada aqui
 # (y, en la version real, su rama en calcular()).
 CATALOGO: dict[str, MetaIndicador] = {
-    "HV":    MetaIndicador("HV", "HV (Hypervolume)", "max", False, "estricta", "principal",
+    "HV":    MetaIndicador("HV", "HV (Hypervolume)", "max", False, "strict", "principal",
                            "Volumen dominado respecto a un punto de referencia."),
     "IGD":   MetaIndicador("IGD", "IGD (Inverted Generational Distance)", "min", True, "no", "principal",
                            "Distancia media del frente de referencia al PFA."),
-    "IGD+":  MetaIndicador("IGD+", "IGD+ (IGD modificado)", "min", True, "debil", "principal",
-                           "Variante de IGD debilmente Pareto-compliant."),
-    "R2":    MetaIndicador("R2", "R2", "min", True, "debil", "principal",
-                           "Basado en funciones de utilidad (weighted Tchebycheff)."),
-    "Dp":    MetaIndicador("Dp", "Delta p (Hausdorff promediado)", "min", True, "no", "principal",
+    "IGD+":  MetaIndicador("IGD+", "IGD+ (IGD modificado)", "min", True, "weak", "principal",
+                           "Variante de IGD"),
+    "R2":    MetaIndicador("R2", "R2", "min", True, "weak", "principal",
+                           ""),
+    "Dp":    MetaIndicador("Dp", "Delta p", "min", True, "no", "principal",
                            "Distancia de Hausdorff promediada (combina GD e IGD)."),
-    "Eps+":  MetaIndicador("Eps+", "Epsilon+ (aditivo)", "min", True, "debil", "principal",
+    "Eps+":  MetaIndicador("Eps+", "Epsilon+ (aditivo)", "min", True, "weak", "principal",
                            "Minimo desplazamiento aditivo para dominar la referencia."),
     "Riesz": MetaIndicador("Riesz", "Riesz s-energy", "min", False, "no", "secundario",
-                           "Energia de pares; mide uniformidad de la distribucion."),
+                           "Energia de pares: mide uniformidad de la distribucion."),
     "SPD":   MetaIndicador("SPD", "Solow-Polasky (SPD)", "max", False, "no", "secundario",
                            "Diversidad del conjunto de soluciones."),
 }
@@ -69,7 +69,7 @@ def calcular(ind_id: str, puntos: np.ndarray,
     """
     meta = CATALOGO[ind_id]
     if meta.requiere_ref and ref is None:
-        # FUTURO: lanzar/avisar; aqui solo es maqueta.
+        # FUTURO: lanzar/avisar; 
         pass
     return mock.valor_indicador(ind_id, puntos)
 

@@ -44,9 +44,8 @@ def main() -> None:
     state.init_estado()          # session_state como unica fuente de verdad
     sidebar.render()             # configuracion global + navegacion con gating
 
-    st.title("Benchmarking de MOEAs — maqueta de interfaz")
-    st.caption("Demo del FLUJO de la aplicacion (sin logica todavia). "
-               "Todos los pasos estan desbloqueados para poder recorrerlos.")
+    st.title("Benchmarking de MOEAs ")
+    st.caption("Demo del FLUJO de la aplicacion.")
 
     # Flujo siempre visible: en que paso estamos y cuales se completaron.
     components.stepper()

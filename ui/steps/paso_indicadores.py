@@ -12,9 +12,9 @@ from .. import state
 
 # Texto para el atributo de Pareto-compliance (primera clase).
 _COMP = {
-    "estricta": "Pareto-compliant ESTRICTA (permite conclusiones fuertes).",
-    "debil": "Pareto-compliant DEBIL (permite conclusiones fuertes).",
-    "no": "NO Pareto-compliant (usar con cautela: solo conclusiones debiles).",
+    "strict": "STRICT Pareto-compliant",
+    "weak": "WEAK Pareto-compliant",
+    "no": "NO Pareto-compliant",
 }
 
 
