@@ -1,0 +1,327 @@
+Notas Generales de Papers
+
+1. Quality Evaluation of Solution Sets in Multiobjective
+Optimisation: A Survey
+
+ Conceptos Básicos
+Frente de Pareto: Más que una barrera física, es el conjunto de soluciones óptimas donde una solución no puede mejorar en un objetivo sin degradar el rendimiento en algún otro.
+Quality Indicators (QIs): No son algoritmos de optimización en sí, sino funciones matemáticas que mapean un conjunto de soluciones a un número real (escalar). Sirven para comparar cuantitativamente conjuntos de soluciones, monitorear el progreso de la búsqueda o incluso guiarla.
+2. Las 4 Dimensiones de Calidad
+Como bien señalas, la calidad es el equilibrio entre estos cuatro aspectos:
+Convergencia: La cercanía matemática del conjunto de soluciones frente al Frente de Pareto real.
+Spread (Extensión): Mide el área cubierta. Sin embargo, un buen spread no solo debe empujar los límites de alto y bajo costo, sino involucrar tanto las porciones exteriores como las interiores del Frente de Pareto.
+Uniformidad: Mide qué tan equitativa es la distribución de las soluciones. Lo ideal es un espaciamiento equidistante entre ellas. (Nota: Spread + Uniformidad se conocen en conjunto como la Diversidad del algoritmo).
+Cardinalidad: Volumen bruto de opciones viables. Aunque suele considerarse el aspecto menos importante frente a los otros tres, un algoritmo que genera un mayor número de soluciones con los mismos recursos computacionales siempre es preferible.
+3. Evaluación de Indicadores Específicos
+Indicadores de un solo aspecto:
+Convergencia - Generational Distance (GD): Calcula la distancia euclidiana de cada solución descubierta hacia el frente real. El detalle técnico de por qué es sensible a outliers (valores atípicos) es porque utiliza la media cuadrática. Esto hace que un solo dato alejado arruine la puntuación de todo el conjunto. Se puede mejorar usando la media aritmética para que sea más estable (equivale a fijar p=1 en la media potencial). Tiene un SEGUNDO defecto independiente del de los outliers: depende del tamaño del conjunto. Cuando N tiende a infinito, GD tiende a 0 aunque el conjunto esté muy lejos del frente; por eso GD solo es fiable comparando conjuntos del mismo tamaño (o muy similar). Nota de fondo: la raíz del problema de GD (y también de MS e IGD) es que NO son Pareto-compliant, es decir, que A domine a B no garantiza una mejor puntuación.
+Spread - Maximum Spread (MS): Premia los bordes. Como bien indicas, solo toma en cuenta las soluciones extremas y falla en reflejar la calidad de la cobertura interna. Además, es vulnerable a dar buenas puntuaciones a soluciones atípicas alejadas de la frontera real.
+Indicadores Integrales (Combinan varias dimensiones):
+Hipervolumen (HV): Construye polígonos desde las soluciones hasta un "punto de referencia". Es el único indicador popular con conformidad estricta con Pareto (si el conjunto A domina al conjunto B, su HV siempre será mayor). Su gran debilidad es que su costo computacional aumenta exponencialmente con el número de objetivos, haciéndolo muy pesado para problemas de muchas dimensiones.
+Inverted Generational Distance (IGD): Invierte el GD calculando la distancia media desde el Frente de Pareto verdadero hacia las soluciones del algoritmo. Evalúa convergencia y diversidad a la vez, pero depende completamente de que la "plantilla" de referencia tenga una distribución densa y uniforme; de lo contrario, puede dar resultados muy engañosos.
+Indicador Épsilon (ϵ): No busca distancias medias ni volúmenes. Se basa en encontrar el factor mínimo de penalización (o traslación) que hay que sumarle (versión aditiva) o multiplicarle (versión multiplicativa) a un conjunto de soluciones para que logre superar (dominar débilmente) a otro. Ignora el resto de la distribución y se enfoca solo en la mayor diferencia. OJO, no confundir: este es el INDICADOR ϵ, que MIDE calidad (un número que compara dos conjuntos). Es distinto de la DOMINANCIA ϵ (papers 3 y 4), que es un mecanismo de BÚSQUEDA/archivado: una rejilla que adelgaza la población dejando una sola solución por celda. Mismo símbolo, roles totalmente distintos.
+4. Obstáculos Operativos
+Escalado y Normalización: Un paso obligatorio antes de aplicar matemáticas porque los objetivos suelen ser inconmensurables (ej. comparar precio en miles de dólares vs peso en kilogramos). Si no se normaliza (idealmente al rango [0, 1]), los objetivos con rangos numéricos más grandes dominarán artificialmente la evaluación.
+Dominance Resistant Solutions (DRS): Son anomalías que tienen un valor óptimo en un objetivo, pero un rendimiento absolutamente pésimo en otro. Las DRS pueden distorsionar enormemente el punto de referencia para calcular el Hipervolumen o arruinar los resultados del IGD. Deben purgarse o manejarse con versiones mejoradas de los indicadores (como IGD+). Matiz: IGD+ se diseñó sobre todo para RECUPERAR la conformidad (débil) con Pareto que el IGD clásico no tiene; manejar mejor las DRS es una consecuencia, no su único motivo.
+5. Búsqueda Basada en Indicadores (Indicator-based Search)
+Mencionaste este punto al final. Este es un enfoque moderno y poderoso donde los indicadores (como Hipervolumen o R2) no solo se usan para medir resultados al final, sino que se integran directamente dentro del optimizador para guiar su búsqueda paso a paso. Así, el algoritmo evoluciona para maximizar el indicador en lugar de usar criterios clásicos, siendo esto muy prometedor en problemas complejos de muchos objetivos.
+6. Tus Conclusiones (Mejoradas)
+La calidad es un equilibrio complejo entre convergencia, extensión, uniformidad y cardinalidad. Ningún indicador por sí solo es perfecto.
+La elección del indicador depende del contexto: Utiliza el Hipervolumen si cuentas con buenos recursos computacionales, pocos objetivos y puedes estimar bien el "punto nadir" (el peor límite posible). Utiliza IGD+ si tienes problemas masivos de muchas dimensiones y puedes construir un frente de referencia denso y perfecto.
+Higiene de datos: Es obligatorio escalar/normalizar los datos siempre que impliquen mezcla de objetivos, y es crítico estar alerta a las DRS para no contaminar la evaluación.
+=================================================================================================================
+2. A tutorial on multiobjective optimization: fundamentals
+and evolutionary methods
+
+1. Definiciones Fundamentales (El Problema y el Espacio)
+MOP (Problema de Optimización Multiobjetivo): Ocurre cuando tenemos dos o más funciones objetivo (generalmente en conflicto) que deseamos optimizar simultáneamente. No existe una única solución perfecta, sino un conjunto de compromisos.
+Espacios de trabajo:
+Espacio de Decisión: Las variables físicas o parámetros que podemos modificar (el input). Las soluciones aquí forman el Conjunto Óptimo de Pareto.
+ Espacio de Objetivos: El resultado o rendimiento de esas decisiones (el output). La proyección matemática de estas soluciones forma el Frente de Pareto. En problemas continuos, este frente es infinito.
+Toma de Decisiones (Incorporación de Preferencias):
+A priori: El decisor define sus prioridades antes del cálculo. El algoritmo busca una solución específica basada en eso.
+A posteriori: El algoritmo primero descubre todo el Frente de Pareto (todas las opciones viables) y luego el decisor elige. El objetivo principal aquí es evitar generar soluciones dominadas.
+Interactivo: Una mezcla donde el algoritmo propone, el decisor opina, y el algoritmo ajusta su búsqueda.
+
+2. Orden, Dominancia y el Frente
+Dominancia de Pareto: Una solución A domina a B matemáticamente si A no es peor que B en ningún objetivo, y es estrictamente mejor en al menos uno.
+Algoritmo de Conos (Cone Dominance): Es una forma geométrica de visualizar y modificar la dominancia. En lugar de un ángulo recto de 90 grados para definir qué es mejor, se usa un "cono" que puede abrirse o cerrarse para ser más o menos estricto al aceptar soluciones.
+
+3. El Enfoque Clásico: Técnicas de Escalarización
+Convertir un problema de múltiples objetivos en uno de un solo objetivo usando matemáticas simples:
+Escalarización por Suma Ponderada: Se le da un peso (porcentaje de importancia) a cada objetivo y se suman. Defecto crítico: Funciona bien en Frentes de Pareto convexos, pero es matemáticamente ciego y falla en descubrir soluciones si el Frente de Pareto es cóncavo.
+Escalarización de Chebyshev: Solución algorítmica superior a la suma simple. Mide la distancia máxima desde una opción hasta un "punto de referencia ideal" inalcanzable. Al calcular las penalizaciones basadas en el peor rendimiento, su trazado matemático se curva, permitiendo descubrir soluciones en frentes cóncavos.
+
+4. Evolutionary Multiobjective Optimization (EMO)
+¿Por qué usar algoritmos evolutivos? Porque al estar basados en "poblaciones" de individuos, tienen la ventaja natural de descubrir múltiples soluciones en una sola ejecución, en lugar de tener que correr el algoritmo docenas de veces. Además, son inmunes a problemas matemáticos como la falta de continuidad en las funciones.
+
+MOEAs Representativos (Algoritmos):
+NSGA-II (Nondominated Sorting Genetic Algorithm II): Es el algoritmo más popular. Funciona mediante un sistema de clasificación por capas (Frentes de dominancia). Para desempatar individuos que están en la misma capa, usa la distancia de aglomeración o de hacinamiento (crowding distance, mediante el crowded-comparison operator), priorizando a las soluciones que están más solas para mantener la diversidad.
+SMS-EMOA (S-Metric Selection EMOA): Es un algoritmo basado en indicadores. Su motor de selección interno utiliza el Hipervolumen (Métrica S). En cada generación, elimina a la solución que menos volumen geométrico aporta al grupo, asegurando maximizar la cobertura del espacio.
+MOEA/D (Decomposition): Fractura un problema gigante multiobjetivo en múltiples subproblemas de un solo objetivo (usando técnicas como Chebyshev). Los resuelve todos en paralelo y simultáneamente. Las soluciones vecinas comparten información, "absorbiendo mejoras cooperativas".
+
+5. Evaluación de Rendimiento (Performance Assessment)
+Indicadores Unarios: Evalúan un solo algoritmo y le dan una "nota" absoluta (ej. este algoritmo sacó 0.8 en Hipervolumen).
+Indicadores Binarios: Cruzan dos algoritmos en un enfrentamiento directo para ver cuál domina la respuesta del otro (ej. A es mejor que B).
+Attainment Curves (Curvas de Consecución): Ya que los algoritmos evolutivos usan aleatoriedad matemática (inteligencia adaptativa), nunca dan el mismo resultado dos veces. Estas curvas resumen múltiples ejecuciones para trazar una "línea de probabilidad segura" (ej. el límite donde tenemos un 50% de probabilidad de descubrir ciertas soluciones).
+
+6. Many-Objective Optimization (El Gran Reto) 
+A partir de 4 o más objetivos, la Optimización Multiobjetivo se convierte en Many-Objective. 
+El problema: A medida que crecen las dimensiones, la proporción de soluciones no dominadas en la población aumenta drásticamente y tiende a irse al infinito. Matemáticamente, casi todas las soluciones se vuelven "incomparables" bajo la Dominancia de Pareto tradicional, lo que hace que la búsqueda se vuelva prácticamente aleatoria.
+La solución: Requiere técnicas avanzadas como relajar las formas de dominancia (hacer que sea más fácil que una solución domine a otra) o usar técnicas estadísticas para reducir la dimensionalidad eliminando objetivos redundantes.
+
+============================================================================================
+3. Evolutionary multi-objective optimization: some current research trends and topics that remain to be explored
+
+
+
+1. La Esencia Evolutiva y el "Estancamiento"
+El Problema Multiobjetivo (MOP): Ocurre cuando dos o más objetivos entran en conflicto. Buscar la Frontera de Pareto significa encontrar ese límite físico o matemático exacto donde mejorar una variable perjudica inevitablemente a otra. Las soluciones en esta curva se denominan "no dominadas".
+El Salto a la Evolución Biológica: Los algoritmos tradicionales se quedaban cortos. Se abrazaron los Algoritmos Evolutivos (EAs) porque operan con "poblaciones", lo que permite descubrir múltiples soluciones en una sola ejecución y manejar problemas matemáticos complejos sin asustarse.
+El Estancamiento por Éxito: Tras 23 años de crecimiento exponencial, el campo experimentó dolores de crecimiento. Algoritmos como el NSGA-II se volvieron tan masivamente populares que frenaron un poco la innovación radical; la investigación se llenó de "trabajos por analogía" (copiar y pegar adaptaciones menores) en lugar de crear ideas verdaderamente nuevas.
+
+Tendencias: Nuevos Algoritmos Guiados por Indicadores
+El paradigma de diseño está cambiando. En lugar de darle reglas explícitas de diversidad al algoritmo, se incorpora un indicador de rendimiento como motor principal.
+IBEA y SMS-EMOA: Utilizan medidas binarias o el hipervolumen. El algoritmo muta y evoluciona con un único objetivo central: hacer que el volumen geométrico (o el indicador) sea lo más grande posible. Esto delega la responsabilidad matemática al indicador en lugar de usar complejas heurísticas de separación.
+
+3. La Búsqueda de la Eficiencia (Ahorrando Evaluaciones)
+Los límites teóricos para comprobar matemáticamente quién domina a quién ya se conocen desde hace más de 30 años; ahí no hay mucho margen de mejora. El verdadero problema es que evaluar físicamente una solución en el mundo real es costoso. Aquí entran las "trampas" inteligentes:
+Modelos Subrogados (ej. ParEGO): Crean una aproximación matemática barata del problema real para hacer pruebas rápidas. Su defecto es que tienen márgenes de error y algunos (como ParEGO) solo funcionan bien si el problema tiene baja dimensionalidad.
+Herencia de Aptitud (Fitness Inheritance): En lugar de evaluar a un "hijo" nuevo, el algoritmo simplemente asume que su rendimiento será el promedio del rendimiento de sus "padres". Es increíblemente rápido, pero asume demasiadas cosas y puede desviar la búsqueda.
+
+Formas Relajadas de Dominancia (Atacando la Complejidad)
+Dominancia Épsilon (ε): Es un mecanismo que actúa como una cuadrícula o "rejilla" sobre el espacio de soluciones. 
+Mecánica: El algoritmo permite conservar solo una solución por cada recuadro. 
+Ventaja: Acelera inmensamente la convergencia hacia la frontera.
+El Costo Oculto: Al usar cajas, el algoritmo "borra" los extremos de la frontera y aplana los segmentos rectos. Además, es un gran dolor de cabeza configurar el tamaño exacto del recuadro (ε) sin saber qué forma tiene la frontera de Pareto antes de empezar.
+
+Escalabilidad (El Gran Muro del "Many-Objective")
+Cuando superas los 3 objetivos, casi el 100% de la población de soluciones se vuelve "no dominada".
+El Problema: Como casi nadie domina a nadie matemáticamente, el algoritmo se queda ciego y empieza a elegir ganadores casi al azar.
+Soluciones Actuales: Se utilizan formas relajadas de dominancia (hacer trampa para que sea más fácil que una gane a otra) o se aplican técnicas de reducción de dimensionalidad (fusionar o eliminar objetivos redundantes antes de procesarlos).
+
+Metaheurísticas Alternativas (Más Allá de la Genética)
+La evolución no es la única fuente de inspiración biológica funcional:
+Sistemas Inmunitarios Artificiales: Actúan como un sistema distribuido que aprende y recupera conocimiento (como nuestro cuerpo al clasificar bacterias).
+Optimización por Colonia de Hormigas (ACO): Búsqueda estocástica basada en el rastro indirecto de "feromonas", ideal para problemas combinatorios donde las soluciones se "construyen" paso a paso.
+Optimización por Enjambre de Partículas (PSO): Cada solución es un pájaro (partícula) que altera su rumbo sumando su experiencia personal con la del líder de la bandada. Se ha descubierto que parámetros de vuelo que antes se ignoraban por completo son la clave absoluta para que este modelo funcione en múltiples objetivos.
+
+Las Nuevas Fronteras (Retos Abiertos e Inexplorados)
+Estas son las áreas con mayor potencial de investigación futura:
+Manejo de Restricciones: Las restricciones de igualdad son un territorio casi inexplorado porque, por naturaleza matemática, el punto óptimo se esconde exactamente en la cuerda floja entre lo válido y lo inválido.
+Preferencias del Usuario: Incorporar los deseos humanos directamente en el motor. Por ejemplo, guiar toda la evolución exclusivamente hacia la "rodilla" de la curva de Pareto (el punto de máxima eficiencia de costo-beneficio) ahorrando recursos en generar áreas del gráfico que al cliente no le interesan.
+Control de Parámetros (Sistemas Autocalibrables): Diseñar algoritmos que ajusten sus propias tuercas (tasas de mutación, cruces, penalizaciones) de forma online sin ninguna intervención humana mientras resuelven el problema.
+
+=======================================================================================================================
+
+4. Evolutionary Many-Objective Optimization: A Quick-Start Guide
+
+1. El Salto a "Many-Objective Optimization"
+La Frontera de los Objetivos: La optimización multiobjetivo clásica suele tratar con 2 o 3 objetivos, donde algoritmos como NSGA-II o SPEA2 reinan con un éxito rotundo. Sin embargo, cuando un problema tiene 4 o más objetivos, se clasifica oficialmente como "Many-Objective". Aquí es donde los algoritmos clásicos fallan catastróficamente en convergencia, diversidad y tiempo de cálculo.
+Soluciones No Dominadas (Pareto): Matemáticamente, una solución se considera "no dominada" frente a otra si no es peor en ningún objetivo y es estrictamente mejor en al menos uno. El conjunto de estas combinaciones óptimas forma el Frente de Pareto.
+
+2. Las Dos Metas Fundamentales
+Cualquier algoritmo en este campo tiene dos objetivos que a menudo chocan entre sí:
+Convergencia: La necesidad de acercarse lo más posible a la perfección matemática absoluta (el verdadero Frente de Pareto).
+Diversidad: Lograr un abanico de opciones lo suficientemente amplio y bien distribuido para representar todo el espectro de soluciones posibles.
+
+3. Indicadores de Calidad (Midiendo el Éxito)
+Hipervolumen (HV): Mide exactamente cuánto "terreno o tamaño" del espacio matemático de objetivos ha conquistado el algoritmo. A mayor volumen dominado, mejor. Su talón de Aquiles es su altísimo costo computacional.
+Inverted Generational Distance (IGD): Calcula la distancia media desde el Frente de Pareto verdadero (las aproximaciones reales) hacia las soluciones que encontró tu algoritmo. Se busca minimizar este error.
+Indicador R2: Se basa en funciones de utilidad. Es "débilmente monotónico" (si encuentra una solución estrictamente mejor, le dará mejor puntuación) y su gran ventaja sobre el Hipervolumen es que es altamente eficiente a nivel computacional, ideal para problemas de muchos objetivos.
+
+4. Los 4 Grandes Retos y sus Soluciones Operativas
+1.  Explosión de Población No Dominada: Al haber tantas dimensiones (4+), casi todas las soluciones generadas al azar se vuelven incomparables (no dominadas). El algoritmo "se queda ciego" porque detecta todo como óptimo y pierde la presión selectiva para mejorar.
+Solución: Dominancia Épsilon (ε). Coloca una hipercuadrícula matemática sobre el espacio de soluciones y obliga a que solo exista una solución por celda, forzando la diversidad y reduciendo artificialmente la cantidad de empates.
+Solución: Dominancia Parcial, que calcula la dominancia usando solo un subconjunto de objetivos a la vez, alternándolos.
+2.  Eficiencia Computacional (El costo del Hipervolumen): Calcular el terreno matemático conquistado se vuelve exponencialmente imposible al sumar dimensiones.
+Solución: HypE (Hypervolume Estimation Algorithm). Renuncia al cálculo perfecto y utiliza simulaciones de Monte Carlo para estimar el volumen de forma veloz y aproximada.
+3.  Recombinación (Pérdida en el Espacio): En espacios de alta dimensionalidad, las soluciones están tan lejos unas de otras que cruzarlas genera resultados inútiles.
+ Solución: Cruce Binario Simulado (SBX) con un índice de distribución grande, el cual "obliga" al algoritmo a generar soluciones descendientes que estén físicamente muy cerca de sus padres.
+4.  Visualización (Entender los datos): El cerebro humano no procesa más de 3 dimensiones.
+Coordenadas Paralelas: Colocan los objetivos como columnas verticales (eje X) y el valor de rendimiento traza líneas horizontales (eje Y).
+Mapas de Calor: Las columnas son objetivos, las filas soluciones, y los colores brillantes u oscuros indican el rendimiento.
+Gráficos Radiales / Geodésicos: Distribuyen los datos n-dimensionales en formatos circulares o elípticos.
+
+5. El Arsenal de Algoritmos Modernos (Métodos)
+Borg MOEA: Es autoadaptativo. Actúa como una navaja suiza que lleva múltiples operadores de cruce (como SBX) y va alternando sus herramientas sobre la marcha según cómo se complique el problema localmente.
+AGE-II (Approximation-Guided Evolution): Basado en dominancia ε. Prioriza el control estricto de su memoria (archivo de datos) para garantizar una altísima velocidad de ejecución.
+MOEA/D (Decomposition): Su lógica es la descomposición. Fractura el problema gigante multiobjetivo en múltiples subproblemas escalares y los resuelve en paralelo.
+NSGA-III: A diferencia de MOEA/D, no descompone, sino que inyecta una matriz de puntos de referencia distribuidos uniformemente para garantizar de forma forzada que el algoritmo mantenga la diversidad en todas las direcciones.
+El Veredicto: No hay un "Dios" de los algoritmos. Diferentes estudios confirman que el rendimiento de cada uno depende estrictamente de la geometría subyacente del problema que intentas resolver.
+
+6. Bancos de Pruebas (Benchmarking)
+Para no probar estos algoritmos "a ciegas", la ciencia utiliza bancos de problemas matemáticos artificiales que simulan condiciones extremas:
+DTLZ y WFG: Son familias de problemas continuos altamente escalables. Representan verdaderos campos de minas geométricos (superficies cóncavas, convexas, degeneradas o desconectadas) que validan si el algoritmo realmente funciona antes de llevarlo al mundo real.
+
+=========================================================================================================================
+5. A Taxonomy of Methods for Visualizing Pareto Front Approximations
+
+
+El Paradigma de la Nueva Taxonomía
+Antes, la visualización se dividía torpemente entre "visualización científica" e "información". Los autores proponen una nueva taxonomía estricta para la Optimización Multiobjetivo basada en la naturaleza de los datos y las propiedades de los métodos. 
+La gran división principal de esta taxonomía es:
+1.  Visualizar Conjuntos Únicos (el resultado de una sola ejecución del algoritmo).
+2.  Visualizar Conjuntos Repetidos (el resultado de múltiples ejecuciones del algoritmo).
+
+2. Conjuntos de Prueba (El Laboratorio Empírico)
+Para probar si los métodos de visualización sirven, los autores no usaron problemas reales, sino que simularon bancos de pruebas artificiales de 4 dimensiones y 500 puntos:
+El Conjunto Esférico (Clustered): Simula soluciones que se agrupan en nichos (clústeres).
+El Conjunto en Forma de Rodilla (Uniform): Simula una distribución donde los datos son forzados a extenderse equitativamente.
+
+3. Métodos para Conjuntos Únicos (Mostrando los Resultados)
+Matriz de Diagrama de Dispersión (Scatter Plot Matrix): Proyecta un espacio complejo de 4D a 2D cruzando objetivos. Su fallo crítico: Al aplastar las dimensiones, los puntos se superponen (overlapping). Esto provoca que en el conjunto esférico desaparezca por completo la vista de un clúster entero, y en el conjunto uniforme se pierda la ilusión de equidad.
+RadViz (Transformación de Valores): Dibuja un círculo y ancla los objetivos en los bordes. Imagina que cada punto de dato está atado con resortes a los bordes; el punto se dibuja donde las fuerzas se equilibran. Ventaja: Conserva maravillosamente la distribución local de los puntos. Desventaja: Sacrifica la geometría o forma global del frente.
+Mapeo de Sammon (Basado en Optimización): Usa un algoritmo matemático interno para minimizar una "función de estrés". Su objetivo principal es mantener las distancias entre vecinos lo más parecidas posible a la realidad original. Funciona excelente a nivel microscópico.
+Mapas Autoorganizados (SOM) (Propiedades Agregadas): Emplea redes neuronales artificiales. La red neuronal "observa" los datos y los hexágonos se autoorganizan. Utiliza una Matriz de Distancia Unificada (U-Matrix) que parece un mapa topográfico de calor: los colores claros significan que hay neuronas cerca (es un clúster), y los oscuros revelan lugares vacíos o fronteras que separan grupos.
+
+---
+
+4. Entendiendo la Evolución: Conjuntos Repetidos (La parte que no entendiste)
+Dado que los algoritmos evolutivos usan azar, ejecutar un algoritmo una sola vez no tiene valor científico; se debe repetir decenas de veces. Los autores generaron grupos de "Conjuntos Repetidos" simulados para ver si las herramientas de visualización podían rastrear no solo los resultados finales, sino cómo llegaron ahí en el tiempo.
+
+Aquí te explico los cuatro escenarios que crearon:
+1.  Clustered Sets (Conjuntos Agrupados): Simplemente simulan el resultado final de ejecutar un algoritmo varias veces, donde las respuestas siempre terminan en grupos o nichos.
+2.  Uniform Sets (Conjuntos Uniformes): Simulan el resultado final de múltiples ejecuciones donde el algoritmo logró repartir sus opciones equitativamente por todo el frente.
+3.  Clustered sets with logarithmic convergence (Convergencia Logarítmica): Aquí le agregan la variable del tiempo (saltos evolutivos). Finge ser un algoritmo que al principio avanza rapidísimo hacia la meta, pero conforme se acerca a la perfección, frena drásticamente (comportamiento logarítmico) para pulir detalles de los clústeres.
+4.  Uniform sets with a linear convergence (Convergencia Lineal): Finge ser un algoritmo que avanza hacia el frente uniforme a una velocidad constante y estable desde la primera iteración hasta la última.
+
+---
+
+5. Evaluando el Rendimiento de los Conjuntos Repetidos
+Para graficar esos conjuntos masivos y medir quién ganó, existen dos grandes funciones:
+
+A) Rendimiento en un Momento Dado (Performance at a time) - La función EAF:
+   EAF (Empirical Attainment Function): Es un radar de probabilidades. Escanea el espacio y calcula la frecuencia o proporción de ejecuciones que lograron alcanzar un punto exacto. No le importa cómo llegó el algoritmo ahí, solo si llegó o no.
+   Corte por planos (Slicing): Como en 3D la función EAF dibuja "cuboides" difíciles de ver, se hacen cortes transversales (rebanadas) en ángulos oblicuos (ej. 45°) para poder ver el interior de esas zonas de probabilidad usando mapas de calor.
+
+B) Rendimiento a lo Largo del Tiempo (Performance over time) - La función aRTA:
+aRTA (Average Runtime Attainment): Es el salto evolutivo máximo de evaluación. No solo cuenta quién llegó al punto, sino que rastrea el número exacto de evaluaciones (el tiempo promedio) que le tomó al algoritmo conquistar esa coordenada. Resume todo el proceso de optimización desde el inicio hasta el final. Al ser tan denso computacionalmente, suelen superponer una cuadrícula o matriz para visualizarlo.
+
+
+
+
+
+
+
+
+
+
+=========================================================================================================================
+6. A Multi-Objective Evolutionary Algorithm Based on Uniformity and Diversity to Handle Regular and Irregular Pareto Front Shapes (MOEA-UD)
+(Márquez-Vega, Falcón-Cardona y Covantes Osuna — IEEE Access, 2024)
+
+1. El Problema que Ataca
+La mayoría de MOEAs modernos guían la búsqueda con un "conjunto de referencia" (un abanico de vectores de peso colocados en el espacio de objetivos). El problema central es la UNIFORMIDAD: lograr soluciones repartidas equitativamente sobre el frente sin importar su forma. La distinción clave del paper:
+- Frentes regulares: tienen forma de símplex (lineal, cóncavo, convexo o mixto). Aquí los vectores de peso predefinidos funcionan de maravilla.
+- Frentes irregulares: degenerados, desconectados o invertidos. Aquí los vectores predefinidos fallan, porque su distribución uniforme "de fábrica" ya no coincide con la forma real del frente.
+El punto de Ishibuchi (2017): durante años los MOEAs se sobre-especializaron en problemas artificiales cuyo frente es casi un símplex, y por eso rinden mal en lo irregular. MOEA-UD busca un rendimiento "invariante a la forma del frente" (PF shape invariant).
+
+2. Conceptos Base: Vectores de Peso y SLD
+Vector de peso: un vector cuyas componentes son no negativas y suman 1. Sirve para trocear la población en "nichos": cada solución se asigna al vector de peso más cercano, y el grupo de soluciones alrededor de un vector forma un nicho.
+Simplex-Lattice Design (SLD): el método estándar para generar vectores de peso uniformemente distribuidos sobre el símplex unitario (lo usan NSGA-III, MOEA/D, etc.). MOEA-UD usa la variante de dos capas (boundary + inner) para no quedarse sin vectores interiores. Su limitación: no puedes pedir un número arbitrario de vectores, la cantidad la fija una fórmula combinatoria según el número de objetivos.
+
+3. Por Qué No Bastan los Métodos de Adaptación Previos
+Para sobrevivir en frentes irregulares, ya existían métodos que ADAPTAN los vectores de peso sobre la marcha. El paper los clasifica en dos familias:
+- Basados en exploración: generan vectores nuevos hacia regiones vacías del frente (al azar o cerca de los existentes) y conservan los que sí logran guiar población. Ej: A-NSGA-III, RVEA*.
+- Basados en explotación: usan las soluciones bien diversificadas ya encontradas para reacomodar los vectores. Ej: MOEA/D-AWA, AR-MOEA, AdaW, los basados en redes GNG (DEA-GNG, RVEA-iGNG), y AdaK (que ya usa niching + PPF).
+El defecto compartido: adaptar los vectores para representar formas complejas DAÑA su capacidad de representar bien los frentes regulares (símplex). Es decir, ganas en lo irregular pero pierdes en lo regular. MOEA-UD nace para no tener que elegir.
+
+4. La Munición Nueva: Funciones de Energía de Par (PPF)
+Idea prestada de la física: una PPF mide la energía total de un sistema de partículas. Minimizar esa energía hace que los puntos se repartan equitativamente sobre una superficie (manifold), sin importar su geometría. Como el frente de Pareto de m objetivos es a lo sumo una superficie de (m-1) dimensiones, las PPF sirven para distribuir soluciones sobre él aunque sea irregular.
+- Kernel usado: Riesz s-energy, K = 1/||u-v||^s. Es estrictamente decreciente: si dos soluciones están casi pegadas la energía se dispara (las castiga), y si se alejan tiende a cero. El parámetro s controla qué tan agrupada queda la distribución.
+- Truco práctico: el s óptimo depende de la forma del frente, del número de objetivos y de la cardinalidad. Como no se conoce de antemano, lo aproximan con una regresión lineal: s = 0.4175·m + 4.655.
+- Distancia paralela: antes de calcular la energía, proyectan las soluciones sobre el hiperplano (suma de fi = 1). Esto evita premiar soluciones que están lejos del frente pero que, por estar aisladas, aportarían "falsa diversidad" si se midiera con distancia euclidiana directa.
+
+5. La Idea Central de MOEA-UD: DOS Conjuntos de Referencia
+Aquí está la novedad. En lugar de un solo conjunto de vectores, MOEA-UD mantiene dos, adaptados de forma iterativa:
+- Wu (uniformidad): los vectores de peso ACTIVOS del conjunto predefinido (SLD), es decir, solo los que realmente tienen soluciones asociadas (nichos no vacíos). Garantiza el reparto equitativo en la zona que sí toca el frente.
+- Wd (diversidad): vectores extra generados a partir de soluciones que viven en regiones poco pobladas del frente, elegidas por el mecanismo PPF. Sirve para tapar huecos.
+Selección de nichos en dos etapas: primero se usa Wu (uniformidad) para elegir la mejor solución por nicho; si todavía no se llena el tamaño de población, ENTONCES se usa Wd (diversidad) para rellenar los espacios vacíos con el resto de candidatos. La prioridad es siempre uniformidad; la diversidad entra solo a llenar huecos. Eso es lo que le permite ser bueno en regular E irregular a la vez.
+
+6. Los Dos Motores Internos de Selección
+Selección por nichos (niching): asocia cada solución al vector de peso más cercano usando la distancia perpendicular, y dentro de cada nicho elige la mejor con la AASF (Augmented Achievement Scalarizing Function, una función de escalarización Pareto-compliant con un α pequeño = 1e-4). Un vector se llama "activo" si su nicho no quedó vacío.
+Selección basada en PPF: como resolver de forma exacta el subconjunto que minimiza la energía es carísimo, usan un algoritmo voraz (greedy). El aporte del paper es un "fast steady-state greedy removal": en vez de ir borrando del conjunto completo, parte de un subconjunto inicial y va metiendo candidatos uno a uno eliminando en cada paso al de peor contribución; usan una matriz de disimilitud y memoización para no disparar el costo. Se usa como complemento DESPUÉS del niching, para llenar lo que falte.
+
+7. El Esqueleto del Algoritmo
+A grandes rasgos: se inicializa población aleatoria y el conjunto SLD; en cada generación hay variación (SBX + mutación polinomial), selección de supervivencia (que usa las dos etapas de niching), y un archivo externo de soluciones no dominadas que se mantiene con niching + PPF. Ese archivo es la clave: de él se re-derivan Wu y Wd. La adaptación se hace cada 5% de las generaciones y se apaga al llegar al 90% (para dejar que converja al final sin moverle el piso). Complejidad por generación: O(m·N^2).
+
+8. Setup Experimental
+Comparan MOEA-UD contra 12 MOEAs del estado del arte: las bases (MOEA/D, NSGA-III, RVEA), sus versiones adaptativas para frentes irregulares (AdaW, A-NSGA-III, RVEA*) y propuestas recientes invariantes a la forma (Two_Arch2, VaEA, AR-MOEA, hpaEA, PREA, RVEA-iGNG).
+Bancos de prueba: DTLZ y WFG (regulares y escalables, los de siempre), Minus-DTLZ y Minus-WFG (versiones invertidas), e IMOP y VNT (formas muy irregulares), más el conjunto RWA de 10 problemas del mundo real. Objetivos m en {3, 5, 8, 10}. 30 ejecuciones independientes y test de Wilcoxon de una cola (α = 0.05).
+Indicadores de calidad usados: HV (Pareto-compliant, mide convergencia + extensión; punto de referencia [2,...,2] en el espacio normalizado, elegido así para no inflar el HV en el centro de los frentes invertidos) y Solow-Polasky Diversity (SPD), que mide SOLO diversidad. En ambos, mayor es mejor.
+
+9. Veredicto y Trabajo Futuro
+MOEA-UD obtiene el mejor rango promedio en frentes regulares (2.196, por delante de PREA y AR-MOEA) y, sobre todo, logra el rendimiento "invariante a la forma" que perseguía: es bueno tanto en regular como en irregular sin sacrificar uno por el otro. Gana de forma significativa a TODOS los rivales en frentes lineales invertidos (3, 5, 8 y 10 objetivos) y en frentes convexos invertidos de 3 objetivos.
+Línea futura: probar el algoritmo con un conjunto predefinido que tenga MENOS vectores que el tamaño de población, usar otras PPF distintas al Riesz s-energy, adaptar el valor de s según la forma del frente, y explorar otras funciones de escalarización que equilibren mejor convergencia y diversidad.
+
+Conexión con tus otros papers: aquí confluyen varias piezas que ya tienes. Los frentes invertidos/degenerados/desconectados son las "formas irregulares" que el Quick-Start Guide y el survey mencionan como el muro de los many-objective; DTLZ y WFG son los mismos bancos del Tutorial; NSGA-III (puntos de referencia), MOEA/D (descomposición) y los métodos basados en indicadores (R2, IGD+, AASF como escalarización Pareto-compliant) son justo los enfoques que MOEA-UD combina y supera.
+=========================================================================================================================
+7. GECCO 2021 Tutorial on Benchmarking Multiobjective Optimizers 2.0
+(Dimo Brockhoff y Tea Tušar — GECCO 2021, tutorial en diapositivas)
+
+Nota de lectura: este NO es un paper de investigación, es un tutorial. Su valor para ti es directo: es el manual de metodología de exactamente lo que tu estancia construye (una app de benchmarking de MOEAs). El truco narrativo de los autores es contar la historia del benchmarking multiobjetivo como un versionado de software (v0.0.1alpha → v0.1beta → v1.0 → v2.0), donde cada versión es un salto de madurez. El tutorial tiene tres partes: (1) Evaluación de desempeño, (2) Problemas de prueba y sus visualizaciones, y (3) Recomendaciones. Aviso de los autores: solo cubren espacios de búsqueda continuos y sin restricciones, y asumen que ya sabes lo básico (dominancia, frente/conjunto de Pareto, puntos ideal y nadir).
+
+PARTE 1 - Evaluación de Desempeño (la columna metodológica)
+
+La historia, por versiones:
+- v0.0.1alpha (los inicios): los MOEAs se comparaban a OJO, con scatter plots del frente (ej. IBEA vs SPEA2 vs NSGA-II en ZDT6). Subjetivo y no escalable.
+- v0.1beta: tablas de números. "Los números tienen su valor... pero no solo tablas, por favor." El mensaje es que las tablas esconden la dinámica.
+- v1.0: aparecen DOS enfoques formales para estudios empíricos:
+  1. Enfoque de función de consecución (attainment function): aplica tests estadísticos DIRECTAMENTE al conjunto de aproximación; te dice cómo y dónde ocurren las diferencias de desempeño.
+  2. Enfoque de indicadores de calidad: reduce cada conjunto a UN valor escalar (un indicador unario) y aplica los tests sobre esos valores.
+
+La Función de Consecución Empírica (EAF): α_T(z) "cuenta" qué fracción de las N ejecuciones logra alcanzar o dominar un vector z en el tiempo T. Es la generalización multiobjetivo de la función de distribución acumulada empírica (la del caso de un solo objetivo, escenario de "presupuesto fijo"). Es el mismo concepto que ya viste en el paper de taxonomía de Tušar.
+
+El requisito clave del enfoque por indicadores - MONOTONICIDAD: no cualquier indicador sirve. El orden que impone debe RESPETAR la dominancia de Pareto.
+- Monótono: si A es al menos tan bueno como B (A ≼ B), entonces I(A) ≥ I(B).
+- Estrictamente monótono: además, si A es mejor y distinto, I(A) > I(B). Es decir, mejor = valor estrictamente más alto.
+- El hipervolumen es estrictamente monótono; el indicador epsilon es (solo) monótono.
+Por qué importa tanto: la dominancia de Pareto es la forma MÍNIMA de preferencia. Si un indicador la contradice, "ni siquiera has definido un problema multiobjetivo de verdad". Por eso, ante la explosión de indicadores que hay en la literatura (22 en Zitzler 2003 → 63 en Li & Yao 2019 → 100 en Audet 2021), su recomendación es quedarse solo con los (estrictamente) monótonos: todos los basados en hipervolumen, el epsilon unario, R2 e IGD+.
+→ Para tu app: esto te fija la lista exacta de indicadores a implementar (HV, Epsilon+, R2, IGD+) — y justo coincide con la que pide tu plan de trabajo. Implementar uno NO monótono (GD, IGD clásico) sería un error metodológico que la app no debería fomentar por defecto.
+
+v2.0 - LA IDEA CENTRAL del tutorial: con el indicador (estrictamente) monótono correcto, la optimización multiobjetivo NO es distinta de la de un solo objetivo. Una vez que cada conjunto se colapsa en un escalar de calidad bien comportado, puedes reutilizar TODA la maquinaria del benchmarking mono-objetivo: tiempos de ejecución basados en objetivos (target-based runtimes), ECDFs de tiempos de ejecución, performance/data profiles, tests estadísticos, box plots, etc.
+→ Para tu app: este es el principio arquitectónico más importante. Si tu app reduce cada aproximación a un indicador monótono, no necesitas inventar análisis "multiobjetivo especiales": reusas el análisis estándar de corridas. Eso simplifica enormemente el diseño.
+
+La gráfica estrella - ECDF (función de distribución acumulada empírica del tiempo de ejecución):
+- Vista de objetivo fijo (fixed-target) vs presupuesto fijo (fixed-budget). Ventaja del objetivo fijo: escala de razón (interpretar número de evaluaciones es más fácil que interpretar valores de f).
+- Se reconstruye una corrida con ~50 objetivos (targets) equiespaciados; la ECDF da un escalón por cada target alcanzado. Luego se agregan, por ejemplo, 50 targets × 15 corridas en una sola curva.
+- El ÁREA sobre la curva ECDF = tiempo de ejecución logarítmico promedio (geométrico) sobre todos los targets (fáciles y difíciles) y todas las corridas. Una sola gráfica que resume todo.
+Reglas de oro de la ECDF: NUNCA agregar sobre la dimensión (la dimensión es un parámetro de entrada del algoritmo); sí se puede agregar sobre targets y funciones; puede mostrar varios algoritmos a la vez; es una extensión de los data profiles (Moré & Wild 2009) pero con targets múltiples y absolutos; es la herramienta de visualización principal de COCO.
+→ Para tu app: además de visualizar el frente (lo que pide tu Semana 5-6), considera soportar ECDFs/perfiles de tiempo. Es lo que distingue una app de benchmarking seria de una que solo dibuja frentes.
+
+Recomendaciones generales (Parte 1): muestra TODO lo que tengas; mira corridas individuales; repite cada experimento al menos dos veces (para ver la varianza); usa hipervolumen, R2 o epsilon (o cualquier indicador al menos monótono). Flujo experimental sugerido (con o sin COCO): experimento → elección de algoritmos a comparar → postprocesado (ej. python -m cocopp) → mostrar resultados resumen → resultados complementarios → compartir datos procesados (salida html) y datos crudos (módulo de archivo de COCO).
+→ Para tu app: "repetir ≥2 veces y mirar la varianza" implica que tu estructura de datos debe guardar MÚLTIPLES corridas por algoritmo-problema, no un promedio. Y conviene pensar desde ya en exportar/compartir resultados (reproducibilidad).
+
+PARTE 2 - Problemas de Prueba y sus Visualizaciones
+
+Por qué problemas de prueba: para comparar algoritmos necesitas problemas con óptimo conocido y dificultad controlada. Características deseables de un conjunto de prueba (Bartz-Beielstein 2020): diverso, representativo, escalable y ajustable, con óptimos conocidos, y continuamente actualizado.
+
+Historia de los bancos (otra vez por versiones):
+- v0.1: problemas individuales sueltos (Schaffer 1985, Kursawe, Fonseca-Fleming, Poloni, Viennet).
+- v0.2: MOP suite (Van Veldhuizen 1999) — 7 problemas, 2-3 variables, NO escalable en objetivos.
+- v0.5: ZDT (Zitzler-Deb-Thiele 2000) — escalable en variables, 2 objetivos, frentes convexos/cóncavos/desconectados, todos conocidos. (ZDT5 suele omitirse por ser binario.)
+- v1.0: DTLZ (Deb-Thiele-Laumanns-Zitzler 2005) — el salto importante: escalable en variables Y en objetivos, construido con enfoque bottom-up. Frentes lineales/cóncavos/desconectados, conocidos.
+- v1.2: WFG (Huband 2006) — 9 problemas con funciones de forma y transformaciones; añade no separables, multimodales, engañosos y sesgados; frentes convexos/lineales/cóncavos/mixtos/desconectados/degenerados.
+- v1.3: otros bancos bottom-up (LZ, SZDT, Minus-DTLZ/Minus-WFG de Ishibuchi, etc.).
+- v1.5: problemas basados en distancia — 2D inherentemente visualizables, conjunto de Pareto fácil de caracterizar, escalables en objetivos; útiles para ver la distribución de soluciones pero poco realistas.
+- v2.0: bbob-biobj(-ext) (la suite de COCO) — la motivación es que las suites bottom-up tienen propiedades artificiales; aquí se usa una función mono-objetivo separada para CADA objetivo (como en problemas reales). Construidas con las 24 funciones bbob; por ahora limitada a 2 objetivos; frente de Pareto desconocido pero con aproximaciones disponibles.
+
+Tres enfoques para diseñar problemas: (1) combinar funciones mono-objetivo; (2) bottom-up (eliges el frente → construyes el espacio de objetivos → construyes el espacio de búsqueda añadiendo dificultad con una función g); (3) superficie de restricción (para problemas con restricciones).
+Visualización de paisajes multiobjetivo: en espacios de búsqueda de baja dimensión (dominance ratio, dominancia local, gradient path length, PLOT); en cualquier dimensión (line cuts, optima network). Esta parte enlaza directo con tu nota 5 (la taxonomía de Tušar es de la misma autora).
+→ Para tu app: conviene que la app pueda CARGAR las suites estándar (ZDT, DTLZ, WFG) y, sobre todo, sus frentes de Pareto conocidos, porque esos frentes son el conjunto de referencia que necesitan IGD, IGD+ y compañía. Ten presente la crítica de sobre-ajuste (abajo) al elegir qué problemas ofrecer.
+
+PARTE 3 - Recomendaciones y Conclusiones
+
+Conclusiones críticas del tutorial:
+- Las suites construidas bottom-up tienen propiedades poco realistas, y los algoritmos se SOBREAJUSTAN a ellas (especialmente las muy usadas DTLZ y WFG) [Ishibuchi 2017]. Usar funciones separadas por objetivo parece el camino correcto.
+- Aunque los problemas son escalables, casi todos los estudios fijan el número de variables — y en la práctica la escalabilidad del espacio de BÚSQUEDA es casi más importante que el número de objetivos.
+- Hay que pensar en la utilidad real de la investigación (los problemas del mundo real son muy diversos).
+"Benchmarking 3.0" (direcciones abiertas): many-objective, mejores indicadores, implementaciones eficientes, restricciones y mixed-integer, y benchmarking del mundo real (caídas de simulación, paralelismo, cambios dinámicos, decisión interactiva).
+
+Las tres "resoluciones de año nuevo" (el take-home de todo el tutorial):
+1. Muestra gráficas de convergencia / ECDF — cualquier cosa MENOS solo tablas para presupuesto fijo.
+2. Usa los problemas "más realistas" posibles.
+3. Muestra el escalado con la dimensión, tanto del espacio de búsqueda como del de objetivos.
+
+Requisitos que se desprenden para tu app (síntesis): calcular indicadores monótonos (HV, Epsilon+, R2, IGD+); guardar múltiples corridas por algoritmo-problema (no promedios) para poder medir varianza; soportar análisis de objetivo-fijo con ECDFs además de las tablas; visualizar frentes en 2D/3D pero idealmente también curvas de desempeño; nunca agregar resultados sobre la dimensión; poder cargar suites estándar con sus frentes de referencia; y pensar la exportación de datos crudos y procesados para reproducibilidad. En una frase: el tutorial te dice que una buena app de benchmarking no es "graficar frentes", sino reducir conjuntos a indicadores bien comportados y reutilizar el análisis estadístico mono-objetivo encima.

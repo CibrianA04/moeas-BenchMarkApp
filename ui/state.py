@@ -19,6 +19,9 @@ K_PROY = "proyecto_nombre"
 K_SEP = "csv_separador"
 K_DEC = "csv_decimal"
 K_INDS = "indicadores_sel"  # ids de indicadores elegidos
+K_PFAS = "pfas_cargados"    # list[PFA] cargados desde el zip / .pof sueltos
+K_ERR = "pfas_errores"      # list[(archivo, motivo)] de los omitidos
+K_FIRMA = "_firma_subida"   # firma de los archivos ya procesados (evita reprocesar)
 
 
 def init_estado() -> None:
@@ -29,6 +32,8 @@ def init_estado() -> None:
     st.session_state.setdefault(K_SEP, "Coma  ( , )")
     st.session_state.setdefault(K_DEC, "Punto  ( . )")
     st.session_state.setdefault(K_INDS, [])
+    st.session_state.setdefault(K_PFAS, [])
+    st.session_state.setdefault(K_ERR, [])
 
 
 def paso_actual() -> int:

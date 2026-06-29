@@ -1,21 +1,11 @@
 # -*- coding: utf-8 -*-
 """
 ================================================================================
- BenchMark-MOEAs  ·  MAQUETA DE INTERFAZ (solo diseno, SIN logica)
+ BenchMark-MOEAs  
 ================================================================================
-Estancia Verano Delfin · CICESE
 App para EVALUAR y VISUALIZAR aproximaciones al frente de Pareto (PFA) de MOEAs.
 
-Punto de entrada DELGADO: solo configura la pagina, inicializa el estado, dibuja
-la barra lateral y despacha el paso actual. Toda la UI vive en ui/, la logica en
-domain/ y la E/S en data/.
-
-Arquitectura (dependencia en un solo sentido, REGLA DURA):
-    ui (Streamlit)  ->  domain (logica, headless)  ->  data (persistencia, I/O)
-    Nada por debajo de 'ui' importa Streamlit. st.session_state = unica fuente
-    de verdad. Step gating: cada paso se desbloquea al completar el anterior.
-
-Ejecutar:   streamlit run app.py
+Ejecutar:   py -m streamlit run app.py
 ================================================================================
 """
 import streamlit as st
@@ -24,14 +14,14 @@ from ui import components, sidebar, state
 from ui.steps import (paso_datos, paso_indicadores, paso_resultados,
                       paso_visualizacion)
 
-# set_page_config debe ser la PRIMERA llamada de Streamlit.
+#llamada de Streamlit.
 st.set_page_config(
     page_title="BenchMark-MOEAs (maqueta)",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-# Funcion render() de cada paso, en el orden del flujo (indexada por state.paso).
+# Funcion render() de cada paso, orden del flujo
 RENDER_PASOS = [
     paso_datos.render,
     paso_indicadores.render,

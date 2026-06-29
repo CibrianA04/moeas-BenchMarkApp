@@ -86,3 +86,5 @@ streamlit run app.py
 - Nuevo **indicador** -> una entrada en `domain/indicators.py:CATALOGO` (+ su rama en `calcular`).
 - Nuevo **metodo de visualizacion** -> una entrada en `domain/figures.py:METODOS` (+ su funcion).
 - Nuevo **formato de figura** -> ampliar `guardar_figura()`.
+
+

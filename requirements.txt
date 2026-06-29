@@ -5,6 +5,9 @@ pandas>=2.0         # tablas
 matplotlib>=3.8     # motor UNICO de graficas (headless, backend Agg)
 jinja2>=3.1         # requerido por el Styler de pandas (tablas resaltadas)
 
+# Pruebas (solo para correr la suite con pytest; no necesario para la app):
+pytest>=8.0         # tests del lector de .pof (tests/test_csv_io.py)
+
 # FUTURO (aun sin logica; no se importan todavia, no son necesarios para correr):
 # scipy>=1.11       # pruebas estadisticas (Wilcoxon, Mann-Whitney, Friedman)
 # pymoo>=0.6        # backend de Hypervolume (interfaz lista para binario en C)

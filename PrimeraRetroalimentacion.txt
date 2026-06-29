@@ -1,0 +1,49 @@
+
+buscamos que todo sea extensible, un diseño fácilmente para extender
+solo vamos a evaluar y visualizar los moeas
+
+como entrada yo eperare los pareto front aproximation (PFA)
+sera un csv, pero que pida opción para elegir el tipo de separador
+(Por lo general la cabecera es # N M, Donde n es numero de puntos y m es dimension pero eso todavía no lo veremos)
+
+Cada MOEA, puede recibir varios MOP1, MOP2, hasta MOPk
+por cada uno debe construir PFA11, PFA1l
+también se va a tener diferentes indicadores, diferente conjunto, cada pfa va a pasar por un indicador y generara I1l I1l
+y luego esa lista se consume en el script 
+
+
+hipervolumen sacar de Pymoo.org (o C) tenerlo ya compilado y nomas mandarlo a llamar
+
+implementar R2, IGD, IGD+, Delta p, epsilon
+riesz s-energy, polansky (secundarios)
+
+por cad amop se evalúa dependiendo cuantos seleccione el usuario, y luego genera lista de indicadores 
+eso es para uno en particular 
+evaluar los indicadores
+
+con esto se hacen pruebas de desempeño
+prueba de wilcoxon o mann-whitney test
+
+sacar medias y desviación estandar
+bajo las medias se comparan y se hacen las pruebas
+
+se determinar el de mayor valor y con eso se presentara evidencia de desempeño
+
+tabla ejemplo
+
+MOP | m  |oea1 | moea2
+ptlz1| 2-3 media1|media2 (mejor media marcar)
+ptlz2|2-3
+
+al final generar tabla y que se pueda descargar para formato latex
+
+despuesss se puede hacer un diagrama Critical differences plot 
+
+visualización de los frentes, el usuario los puede elegir seleccionar, no se grafica cualquiera, se grafica el que esta asociado a la mediana, leccionar que quieres graficar, con que método, y opción de graficar 
+
+se puede descargar todo en
+svg o png, o tex, eps
+png (prioridad, porque es el mas facil)
+
+configuración textual para jalar los datos
+

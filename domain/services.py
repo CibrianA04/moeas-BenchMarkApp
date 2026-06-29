@@ -4,34 +4,73 @@ Facade del dominio para operaciones respaldadas por la capa de DATOS.
 
 Existe para mantener la dependencia en un solo sentido: la UI llama a estos
 servicios (dominio) y el dominio llama a 'data'. Asi la UI nunca importa 'data'.
+La UI lee los bytes de los archivos subidos y se los pasa a estas funciones.
 """
 from __future__ import annotations
 
+import io
+
 import pandas as pd
 
-from data import csv_io, persistence
-from . import mock
-from .model import ConfigCSV, Proyecto
+from data import csv_io
+from .model import PFA, ConfigCSV, Proyecto
+
+# Columnas del mapeo (una linea por archivo).
+COLS_MAPEO = ["archivo", "MOEA", "MOP", "m", "n", "corrida"]
 
 
-def preview_pfa(origen=None, config: ConfigCSV | None = None) -> pd.DataFrame:
+# ─────────────────────────────────────────────────────────────────────────────
+#  Ingesta de datos reales (.zip = flujo principal; .pof sueltos = pruebas)
+# ─────────────────────────────────────────────────────────────────────────────
+def cargar_zip(zip_bytes, config: ConfigCSV | None = None
+               ) -> tuple[list[PFA], list[tuple[str, str]]]:
     """
-    Devuelve una vista previa de un PFA.
-    MAQUETA: regresa datos de ejemplo.
-    FUTURO: return csv_io.leer_pfa(origen, config) -> matriz N x m envuelta en DataFrame.
+    Procesa el .zip subido por el usuario (en memoria) y devuelve (pfas, errores),
+    donde errores = [(archivo, motivo), ...] de los .pof que se omitieron.
     """
-    _ = (origen, config)         # se usaran a futuro
-    return mock.preview_df()
+    errores: list[tuple[str, str]] = []
+    pfas = list(csv_io.iterar_pofs_zip(zip_bytes, config=config, errores=errores))
+    return pfas, errores
 
 
-def inferir_mapeo(nombres: list[str]):
+def cargar_pofs(archivos, config: ConfigCSV | None = None
+                ) -> tuple[list[PFA], list[tuple[str, str]]]:
     """
-    FUTURO: deduce (MOEA, MOP, corrida) desde cada nombre de archivo usando
-    csv_io.inferir_mapeo_desde_nombre. En la maqueta la UI usa filas de ejemplo.
+    Procesa .pof SUELTOS (para pruebas rapidas). 'archivos' = [(nombre, bytes), ...].
+    Devuelve (pfas, errores) igual que cargar_zip; no aborta el lote por uno malo.
     """
-    return [csv_io.inferir_mapeo_desde_nombre(n) for n in nombres]
+    errores: list[tuple[str, str]] = []
+    pfas: list[PFA] = []
+    for nombre, datos in archivos:
+        try:
+            pfas.append(csv_io.leer_pfa_buffer(io.BytesIO(datos), nombre, config))
+        except Exception as exc:  # noqa: BLE001
+            errores.append((nombre, str(exc)))
+    return pfas, errores
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+#  Vistas que consume la UI (sin que la UI importe 'data')
+# ─────────────────────────────────────────────────────────────────────────────
+def mapeo_desde_pfas(pfas: list[PFA]) -> pd.DataFrame:
+    """Tabla de mapeo autocompletada desde el nombre de cada PFA."""
+    filas = [
+        {"archivo": p.archivo, "MOEA": p.moea, "MOP": p.mop,
+         "m": p.m, "n": p.n, "corrida": p.corrida}
+        for p in pfas
+    ]
+    return pd.DataFrame(filas, columns=COLS_MAPEO)
+
+
+def preview_de_pfa(pfa: PFA, n: int = 8) -> pd.DataFrame:
+    """Primeras 'n' filas (puntos REALES) del PFA, con columnas f1..fm."""
+    columnas = [f"f{j + 1}" for j in range(pfa.m)]
+    return pd.DataFrame(pfa.puntos[:n], columns=columnas)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Persistencia del proyecto (aun stub; lo usa la barra lateral)
+# ─────────────────────────────────────────────────────────────────────────────
 def guardar_proyecto(proy: Proyecto) -> str:
     """MAQUETA: no persiste todavia. FUTURO: persistence.guardar(proy) en SQLite."""
     _ = proy
