@@ -12,7 +12,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from . import mock
+from . import preprocessing
 
 
 @dataclass(frozen=True)
@@ -57,23 +57,46 @@ def secundarios() -> list[MetaIndicador]:
 
 
 def calcular(ind_id: str, puntos: np.ndarray,
-             ref: np.ndarray | None = None, **params) -> float:
+             ref: np.ndarray | None = None,
+             punto_ref: np.ndarray | None = None, **params) -> float:
     """
-    STUB: devuelve un valor de EJEMPLO.
+    Calcula UN indicador sobre un PFA. Hoy SOLO esta implementado HV.
 
-    FUTURO:
-      - HV: via pymoo (interfaz lista para cambiar a un binario en C).
-      - IGD/IGD+/R2/Delta p/Epsilon+: implementacion en Python/numpy; requieren 'ref'.
-      - Riesz/SPD: no requieren referencia.
-      - Validar requiere_ref, normalizar y manejar DRS antes de calcular.
+    - Valida `requiere_ref` contra el CATALOGO: si el indicador necesita frente de
+      referencia y `ref is None`, lanza ValueError.
+    - HV: via pymoo. Usa `punto_ref` (punto de referencia/nadir); si es None, se
+      toma el nadir del propio conjunto (la POLITICA del punto de referencia
+      —nadir, 1.1*nadir, [2,..]— esta PENDIENTE de confirmar con el doc).
+    - El resto de indicadores (IGD/IGD+/R2/Dp/Eps+/Riesz/SPD) aun NO estan
+      implementados: lanzan NotImplementedError.
     """
+    _ = params  # reservado para parametros por indicador (futuro)
+    if ind_id not in CATALOGO:
+        raise KeyError(f"Indicador desconocido: '{ind_id}'.")
     meta = CATALOGO[ind_id]
     if meta.requiere_ref and ref is None:
-        # FUTURO: lanzar/avisar; 
-        pass
-    return mock.valor_indicador(ind_id, puntos)
+        raise ValueError(
+            f"El indicador '{ind_id}' requiere un frente de referencia (ref)."
+        )
+
+    if ind_id == "HV":
+        if punto_ref is None:
+            _, punto_ref = preprocessing.estimar_ideal_nadir(np.asarray(puntos, float))
+        return _hv_pymoo(puntos, punto_ref)
+
+    raise NotImplementedError(
+        f"El computo de '{ind_id}' aun no esta implementado (hoy solo HV)."
+    )
 
 
 def _hv_pymoo(puntos: np.ndarray, punto_ref: np.ndarray) -> float:
-    """STUB del backend de HV. FUTURO: pymoo o binario en C."""
-    raise NotImplementedError("Backend de HV pendiente (pymoo / binario en C).")
+    """
+    Hypervolume via pymoo (minimizacion). `punto_ref` debe dominar (ser >= en cada
+    objetivo) a todos los puntos para que el HV sea > 0. Import perezoso: solo se
+    necesita pymoo cuando de verdad se calcula HV.
+    """
+    from pymoo.indicators.hv import HV   # import perezoso (dependencia opcional)
+
+    P = np.asarray(puntos, dtype=float)
+    ref = np.asarray(punto_ref, dtype=float)
+    return float(HV(ref_point=ref)(P))

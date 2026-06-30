@@ -136,3 +136,44 @@ def test_iterar_pofs_zip_reporta_malos_sin_abortar():
     assert len(pfas) == 1
     assert len(errores) == 1
     assert errores[0][0] == "MOEAD_DTLZ1_02D_N3_R01.pof"
+
+
+# ── Cargador de frentes de REFERENCIA (MOEA-visualization-main/data/) ─────────
+def test_nombre_frente_referencia_y_mapeo():
+    assert csv_io.nombre_frente_referencia("DTLZ2", 3) == ("DTLZ2_03D.pof", "DTLZ2")
+    # Mapeo por defecto VNT2->VIE2, VNT3->VIE3 (PENDIENTE confirmar con el doc).
+    assert csv_io.nombre_frente_referencia("VNT2", 3) == ("VIE2_03D.pof", "VIE2")
+    assert csv_io.nombre_frente_referencia("VNT3", 3) == ("VIE3_03D.pof", "VIE3")
+
+
+def test_leer_frente_referencia_exacto():
+    ref = csv_io.leer_frente_referencia("DTLZ2", 3)
+    assert ref.ndim == 2 and ref.shape[1] == 3 and ref.shape[0] > 0
+
+
+def test_leer_frente_referencia_mapea_vnt_a_vie():
+    # VNT2 no tiene archivo propio: debe leer VIE2_03D.pof (300 puntos, 3 obj).
+    ref = csv_io.leer_frente_referencia("VNT2", 3)
+    assert ref.shape == (300, 3)
+    assert ref.min() < 0          # VIE2 tiene objetivos negativos
+
+
+def test_leer_frente_referencia_inexistente_lanza_filenotfound():
+    # IMOP3 solo existe en 02D: pedir 03D no debe sustituir por uno aproximado.
+    with pytest.raises(FileNotFoundError):
+        csv_io.leer_frente_referencia("IMOP3", 3)
+
+
+def test_leer_frente_referencia_rechaza_demo():
+    # Un prefijo de demo (SLD/INV_SLD/LINEAR) no es frente de referencia valido.
+    with pytest.raises(ValueError):
+        csv_io.leer_frente_referencia("SLD", 2)
+
+
+def test_cobertura_frentes_referencia():
+    filas = {(f["mop"], f["m"]): f for f in csv_io.cobertura_frentes_referencia(
+        [("DTLZ2", 3), ("VNT2", 3), ("IMOP3", 3)])}
+    assert filas[("DTLZ2", 3)]["disponible"] is True
+    assert filas[("VNT2", 3)]["disponible"] is True       # via VIE2_03D
+    assert filas[("VNT2", 3)]["mop_ref"] == "VIE2"
+    assert filas[("IMOP3", 3)]["disponible"] is False      # IMOP3 solo en 02D

@@ -11,6 +11,7 @@ from domain import indicators, statistics
 from .. import components, state
 
 
+
 def render() -> None:
     st.subheader("Paso 3 · Resultados y tablas")
     st.caption("UNA tabla por indicador. La mejor media de cada "

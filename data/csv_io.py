@@ -18,6 +18,7 @@ import io
 import logging
 import re
 import zipfile
+from pathlib import Path
 from typing import Iterator
 
 import numpy as np
@@ -245,3 +246,83 @@ def iterar_pofs_zip(zip_fuente, config: ConfigCSV | None = None,
                 continue
             _verificar_carpeta(nombre, pfa)
             yield pfa
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Frentes de REFERENCIA (verdad de terreno por (MOP, m))
+#
+#  Viven en MOEA-visualization-main/data/ y SOLO valen los que tienen el patron
+#  EXACTO {MOP}_{m:02d}D.pof. Los *_sf_*, SLD_*, INV_SLD_*, LINEAR_* son demo del
+#  doc: NO son frentes de referencia y se rechazan.
+# ─────────────────────────────────────────────────────────────────────────────
+# Carpeta por defecto (relativa a la raiz del repo: data/csv_io.py -> raiz).
+DIR_FRENTES_REF = Path(__file__).resolve().parents[1] / "MOEA-visualization-main" / "data"
+
+# Mapeo de nombre de MOP -> nombre del archivo de referencia. PENDIENTE confirmar
+# con el doc (VNT2/VNT3 no tienen archivo propio; se usan VIE2/VIE3).
+MAPEO_MOP_REF_DEFAULT = {"VNT2": "VIE2", "VNT3": "VIE3"}
+
+# Patron EXACTO de un frente de referencia: un solo guion bajo, sin sufijos.
+_PATRON_REF = re.compile(r"^[A-Za-z0-9]+_[0-9]{2}D\.pof$")
+_PREFIJOS_DEMO = ("SLD_", "INV_SLD_", "LINEAR_")
+
+
+def nombre_frente_referencia(mop: str, m: int, mapeo: dict | None = None) -> tuple[str, str]:
+    """Construye (nombre_archivo, mop_ref) para (MOP, m). Aplica el mapeo de nombres."""
+    mapeo = MAPEO_MOP_REF_DEFAULT if mapeo is None else mapeo
+    mop_ref = mapeo.get(mop, mop)
+    return f"{mop_ref}_{m:02d}D.pof", mop_ref
+
+
+def leer_frente_referencia(mop: str, m: int, dir_ref=None,
+                           mapeo: dict | None = None,
+                           config: ConfigCSV | None = None) -> np.ndarray:
+    """
+    Lee el frente de referencia EXACTO de (MOP, m) -> matriz (R, m).
+
+    - Acepta UNICAMENTE el patron exacto {MOP}_{m:02d}D.pof (rechaza sufijos y los
+      prefijos de demo SLD_/INV_SLD_/LINEAR_).
+    - Si el archivo exacto no existe, lanza FileNotFoundError: NO sustituye por uno
+      aproximado.
+    """
+    dir_ref = Path(dir_ref) if dir_ref is not None else DIR_FRENTES_REF
+    nombre, _ = nombre_frente_referencia(mop, m, mapeo)
+
+    if nombre.startswith(_PREFIJOS_DEMO) or _PATRON_REF.match(nombre) is None:
+        raise ValueError(
+            f"'{nombre}' no es un frente de referencia valido (se exige el patron "
+            "exacto {MOP}_{m:02d}D.pof, sin sufijos ni prefijos de demo)."
+        )
+
+    ruta = dir_ref / nombre
+    if not ruta.is_file():
+        raise FileNotFoundError(
+            f"No existe frente de referencia exacto para (MOP={mop}, m={m}): se "
+            f"busco '{nombre}' en {dir_ref}. No se sustituye por uno aproximado."
+        )
+
+    config = config or ConfigCSV.preset_pof()
+    df = _leer_dataframe(ruta, config)
+    if df.shape[1] != m:
+        raise ErrorValidacionPFA(
+            f"'{nombre}': el frente de referencia tiene {df.shape[1]} columnas, "
+            f"se esperaban m={m}."
+        )
+    return df.to_numpy(dtype=float)
+
+
+def cobertura_frentes_referencia(pares, dir_ref=None,
+                                 mapeo: dict | None = None) -> list[dict]:
+    """
+    Dado un iterable de (MOP, m), reporta cuales tienen frente de referencia exacto.
+    Devuelve una lista de dicts: {mop, m, mop_ref, archivo, disponible}.
+    """
+    dir_ref = Path(dir_ref) if dir_ref is not None else DIR_FRENTES_REF
+    filas = []
+    for mop, m in pares:
+        nombre, mop_ref = nombre_frente_referencia(mop, m, mapeo)
+        filas.append({
+            "mop": mop, "m": m, "mop_ref": mop_ref, "archivo": nombre,
+            "disponible": (dir_ref / nombre).is_file(),
+        })
+    return filas
