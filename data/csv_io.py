@@ -263,7 +263,8 @@ DIR_FRENTES_REF = Path(__file__).resolve().parents[1] / "MOEA-visualization-main
 MAPEO_MOP_REF_DEFAULT = {"VNT2": "VIE2", "VNT3": "VIE3"}
 
 # Patron EXACTO de un frente de referencia: un solo guion bajo, sin sufijos.
-_PATRON_REF = re.compile(r"^[A-Za-z0-9]+_[0-9]{2}D\.pof$")
+# Captura (mop, m) para poder reutilizarlo al emparejar por nombre (disco y zip).
+_PATRON_REF = re.compile(r"^(?P<mop>[A-Za-z0-9]+)_(?P<m>[0-9]{2})D\.pof$")
 _PREFIJOS_DEMO = ("SLD_", "INV_SLD_", "LINEAR_")
 
 
@@ -274,17 +275,90 @@ def nombre_frente_referencia(mop: str, m: int, mapeo: dict | None = None) -> tup
     return f"{mop_ref}_{m:02d}D.pof", mop_ref
 
 
+def _leer_puntos_ref(fuente, nombre: str, m: int,
+                     config: ConfigCSV) -> np.ndarray:
+    """
+    Lee los puntos de UN frente de referencia (ruta de disco o file-like del zip)
+    REUTILIZANDO el parser .pof del modulo (_leer_dataframe: salta la cabecera '#')
+    y valida que tenga m columnas. Nucleo compartido por disco y zip.
+    """
+    df = _leer_dataframe(fuente, config)
+    if df.shape[1] != m:
+        raise ErrorValidacionPFA(
+            f"'{nombre}': el frente de referencia tiene {df.shape[1]} columnas, "
+            f"se esperaban m={m}."
+        )
+    return df.to_numpy(dtype=float)
+
+
+def leer_frentes_de_zip(datos_zip, config: ConfigCSV | None = None,
+                        ) -> tuple[dict[tuple[str, int], np.ndarray], list]:
+    """
+    Lee frentes de referencia SUBIDOS por el usuario en un .zip.
+
+    Estructura esperada: archivos .pof SUELTOS en la raiz del zip (sin subcarpetas),
+    con el patron EXACTO {MOP}_{m:02d}D.pof (el mismo de `nombre_frente_referencia`).
+    El MOP del nombre es el token real del usuario (p. ej. VNT2, NO VIE2): el mapeo
+    VNT->VIE es SOLO para la carpeta automatica.
+
+    Devuelve ({(MOP, m): puntos}, omitidos), donde omitidos es una lista de
+    (nombre, motivo). Un archivo malo se OMITE y REPORTA, no aborta el lote:
+    - no .pof / basura de Mac -> se ignoran en silencio;
+    - .pof en subcarpeta, con nombre invalido o prefijo de demo -> omitido con motivo;
+    - .pof que no se puede leer o cuyas columnas != m -> omitido con motivo.
+    """
+    config = config or ConfigCSV.preset_pof()
+    frentes: dict[tuple[str, int], np.ndarray] = {}
+    omitidos: list = []
+    with _abrir_zip(datos_zip) as zf:
+        for info in zf.infolist():
+            if info.is_dir():
+                continue
+            nombre = info.filename
+            base = _basename(nombre)
+            if not base.lower().endswith(".pof"):
+                continue                       # no es .pof -> se ignora
+            if _es_basura_mac(nombre, base):
+                continue                       # basura de Mac -> se ignora
+            if len([c for c in re.split(r"[\\/]", nombre) if c]) != 1:
+                _reportar(omitidos, base, ValueError(
+                    "frente en subcarpeta; deben ir sueltos en la raiz del zip"))
+                continue
+            coincide = _PATRON_REF.match(base)
+            if base.startswith(_PREFIJOS_DEMO) or coincide is None:
+                _reportar(omitidos, base, ValueError(
+                    "nombre invalido; se espera el patron {MOP}_{m:02d}D.pof "
+                    "sin sufijos ni prefijos de demo"))
+                continue
+            mop, m = coincide.group("mop"), int(coincide.group("m"))
+            try:
+                with zf.open(info) as fh:
+                    puntos = _leer_puntos_ref(io.BytesIO(fh.read()), base, m, config)
+            except Exception as exc:  # noqa: BLE001 (uno malo no aborta el lote)
+                _reportar(omitidos, base, exc)
+                continue
+            frentes[(mop, m)] = puntos
+    return frentes, omitidos
+
+
 def leer_frente_referencia(mop: str, m: int, dir_ref=None,
                            mapeo: dict | None = None,
-                           config: ConfigCSV | None = None) -> np.ndarray:
+                           config: ConfigCSV | None = None,
+                           override: dict[tuple[str, int], np.ndarray] | None = None,
+                           ) -> np.ndarray:
     """
-    Lee el frente de referencia EXACTO de (MOP, m) -> matriz (R, m).
+    Lee el frente de referencia de (MOP, m) -> matriz (R, m).
 
-    - Acepta UNICAMENTE el patron exacto {MOP}_{m:02d}D.pof (rechaza sufijos y los
-      prefijos de demo SLD_/INV_SLD_/LINEAR_).
-    - Si el archivo exacto no existe, lanza FileNotFoundError: NO sustituye por uno
-      aproximado.
+    - PRIORIDAD del usuario (opcion A): si `override` trae (mop, m), devuelve ESE
+      frente (el subido por el usuario) sin tocar la carpeta automatica.
+    - Si no, cae a la carpeta automatica como hoy (con mapeo VNT->VIE): acepta
+      UNICAMENTE el patron exacto {MOP}_{m:02d}D.pof (rechaza sufijos y los prefijos
+      de demo SLD_/INV_SLD_/LINEAR_). Si el archivo exacto no existe, lanza
+      FileNotFoundError: NO sustituye por uno aproximado.
     """
+    if override is not None and (mop, m) in override:
+        return np.asarray(override[(mop, m)], dtype=float)
+
     dir_ref = Path(dir_ref) if dir_ref is not None else DIR_FRENTES_REF
     nombre, _ = nombre_frente_referencia(mop, m, mapeo)
 
@@ -302,27 +376,34 @@ def leer_frente_referencia(mop: str, m: int, dir_ref=None,
         )
 
     config = config or ConfigCSV.preset_pof()
-    df = _leer_dataframe(ruta, config)
-    if df.shape[1] != m:
-        raise ErrorValidacionPFA(
-            f"'{nombre}': el frente de referencia tiene {df.shape[1]} columnas, "
-            f"se esperaban m={m}."
-        )
-    return df.to_numpy(dtype=float)
+    return _leer_puntos_ref(ruta, nombre, m, config)
 
 
 def cobertura_frentes_referencia(pares, dir_ref=None,
-                                 mapeo: dict | None = None) -> list[dict]:
+                                 mapeo: dict | None = None,
+                                 override: dict[tuple[str, int], np.ndarray] | None = None,
+                                 ) -> list[dict]:
     """
-    Dado un iterable de (MOP, m), reporta cuales tienen frente de referencia exacto.
-    Devuelve una lista de dicts: {mop, m, mop_ref, archivo, disponible}.
+    Dado un iterable de (MOP, m), reporta cuales tienen frente de referencia.
+    Devuelve una lista de dicts: {mop, m, mop_ref, archivo, disponible, origen}.
+
+    `origen` es "usuario" (viene de `override`, con PRIORIDAD) o "automatico" (de la
+    carpeta MOEA-visualization-main/data/). Para los del usuario el MOP no se mapea
+    (el token real es la clave), asi que mop_ref == mop.
     """
     dir_ref = Path(dir_ref) if dir_ref is not None else DIR_FRENTES_REF
     filas = []
     for mop, m in pares:
+        if override is not None and (mop, m) in override:
+            filas.append({
+                "mop": mop, "m": m, "mop_ref": mop,
+                "archivo": f"{mop}_{m:02d}D.pof",
+                "disponible": True, "origen": "usuario",
+            })
+            continue
         nombre, mop_ref = nombre_frente_referencia(mop, m, mapeo)
         filas.append({
             "mop": mop, "m": m, "mop_ref": mop_ref, "archivo": nombre,
-            "disponible": (dir_ref / nombre).is_file(),
+            "disponible": (dir_ref / nombre).is_file(), "origen": "automatico",
         })
     return filas
