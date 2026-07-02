@@ -38,6 +38,45 @@ def test_hv_punto_ref_por_defecto_usa_nadir():
     assert np.isfinite(hv) and hv >= 0.0
 
 
+# ── IGD / IGD+ ───────────────────────────────────────────────────────────────
+def test_igd_pfa_igual_a_referencia_es_cero():
+    # Si el PFA coincide con el frente de referencia, IGD = 0.
+    ref = np.array([[0.0, 1.0], [1.0, 0.0], [0.5, 0.5]])
+    assert indicators.calcular("IGD", ref.copy(), ref=ref) == pytest.approx(0.0, abs=1e-12)
+
+
+def test_igdplus_pfa_igual_a_referencia_es_cero():
+    # Idem para IGD+.
+    ref = np.array([[0.0, 1.0], [1.0, 0.0], [0.5, 0.5]])
+    assert indicators.calcular("IGD+", ref.copy(), ref=ref) == pytest.approx(0.0, abs=1e-12)
+
+
+# ── Eps+ (epsilon aditivo) ───────────────────────────────────────────────────
+def test_eps_plus_caso_a_mano():
+    # Minimizacion. R = {(0,0)}, A = {(3,1),(1,4)}:
+    #   eps para cubrir (0,0): (3,1)->max(3,1)=3 ; (1,4)->max(1,4)=4 ; min=3.
+    #   unico r -> eps+ = 3.
+    ref = np.array([[0.0, 0.0]])
+    P = np.array([[3.0, 1.0], [1.0, 4.0]])
+    assert indicators.calcular("Eps+", P, ref=ref) == pytest.approx(3.0)
+
+
+def test_eps_plus_pfa_igual_a_referencia_es_cero():
+    # Frente identico (no dominado) -> eps+ = 0.
+    ref = np.array([[0.0, 1.0], [1.0, 0.0]])
+    assert indicators.calcular("Eps+", ref.copy(), ref=ref) == pytest.approx(0.0, abs=1e-12)
+
+
+# ── Dp (Delta p) ─────────────────────────────────────────────────────────────
+def test_dp_es_max_de_gd_e_igd():
+    from pymoo.indicators.gd import GD
+    from pymoo.indicators.igd import IGD
+    ref = np.array([[0.0, 1.0], [1.0, 0.0], [0.5, 0.5]])
+    P = np.array([[0.1, 0.9], [0.9, 0.1], [0.6, 0.6]])
+    esperado = max(float(GD(ref)(P)), float(IGD(ref)(P)))
+    assert indicators.calcular("Dp", P, ref=ref) == pytest.approx(esperado)
+
+
 # ── Dispatch / validacion del catalogo ───────────────────────────────────────
 def test_requiere_ref_sin_ref_lanza_valueerror():
     # IGD requiere frente de referencia: sin 'ref' debe fallar claro.
@@ -47,11 +86,11 @@ def test_requiere_ref_sin_ref_lanza_valueerror():
 
 
 def test_indicador_no_implementado_lanza_notimplemented():
-    # IGD con ref pasa la validacion de requiere_ref pero aun no esta implementado.
+    # R2 con ref pasa la validacion de requiere_ref pero aun no esta implementado.
     P = np.zeros((5, 2))
     ref = np.ones((5, 2))
     with pytest.raises(NotImplementedError):
-        indicators.calcular("IGD", P, ref=ref)
+        indicators.calcular("R2", P, ref=ref)
 
 
 def test_indicador_desconocido_lanza_keyerror():

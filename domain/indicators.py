@@ -60,17 +60,20 @@ def calcular(ind_id: str, puntos: np.ndarray,
              ref: np.ndarray | None = None,
              punto_ref: np.ndarray | None = None, **params) -> float:
     """
-    Calcula UN indicador sobre un PFA. Hoy SOLO esta implementado HV.
+    Calcula UN indicador sobre un PFA.
 
     - Valida `requiere_ref` contra el CATALOGO: si el indicador necesita frente de
       referencia y `ref is None`, lanza ValueError.
     - HV: via pymoo. Usa `punto_ref` (punto de referencia/nadir); si es None, se
       toma el nadir del propio conjunto (la POLITICA del punto de referencia
       —nadir, 1.1*nadir, [2,..]— esta PENDIENTE de confirmar con el doc).
-    - El resto de indicadores (IGD/IGD+/R2/Dp/Eps+/Riesz/SPD) aun NO estan
-      implementados: lanzan NotImplementedError.
+    - IGD, IGD+ y Dp: via pymoo (import perezoso por rama). Eps+ (epsilon aditivo)
+      se calcula con numpy (esta version de pymoo no trae el modulo de epsilon).
+      Los cuatro usan el frente de referencia `ref` ya validado arriba.
+    - Dp acepta el parametro `p` (default 2) como CONVENCION PENDIENTE de confirmar
+      con el doc; ver `calcular`/rama "Dp" para el detalle.
+    - R2/Riesz/SPD aun NO estan implementados: lanzan NotImplementedError.
     """
-    _ = params  # reservado para parametros por indicador (futuro)
     if ind_id not in CATALOGO:
         raise KeyError(f"Indicador desconocido: '{ind_id}'.")
     meta = CATALOGO[ind_id]
@@ -84,8 +87,34 @@ def calcular(ind_id: str, puntos: np.ndarray,
             _, punto_ref = preprocessing.estimar_ideal_nadir(np.asarray(puntos, float))
         return _hv_pymoo(puntos, punto_ref)
 
+    if ind_id == "IGD":
+        from pymoo.indicators.igd import IGD   # import perezoso (dependencia opcional)
+        return float(IGD(np.asarray(ref, float))(np.asarray(puntos, float)))
+
+    if ind_id == "IGD+":
+        from pymoo.indicators.igd_plus import IGDPlus   # import perezoso
+        return float(IGDPlus(np.asarray(ref, float))(np.asarray(puntos, float)))
+
+    if ind_id == "Eps+":
+        # Epsilon ADITIVO por numpy: esta version de pymoo (0.6.1.x) no incluye el
+        # modulo pymoo.indicators.epsilon. Ver _eps_plus_aditivo.
+        return _eps_plus_aditivo(puntos, ref)
+
+    if ind_id == "Dp":
+        # Delta_p = max(GD_p, IGD_p). `p` se expone (default 2) como CONVENCION
+        # PENDIENTE de confirmar con el doc, NO una decision cerrada. OJO: los GD/IGD
+        # de esta version de pymoo promedian distancias (equivale a p=1) y NO exponen
+        # el exponente p; por eso hoy `p` NO se propaga al computo (queda como TODO
+        # hasta fijar la convencion exacta de Delta_p con el doc).
+        p = params.get("p", 2)  # noqa: F841  (placeholder pendiente; ver docstring)
+        from pymoo.indicators.gd import GD    # import perezoso
+        from pymoo.indicators.igd import IGD  # import perezoso
+        R = np.asarray(ref, float)
+        P = np.asarray(puntos, float)
+        return max(float(GD(R)(P)), float(IGD(R)(P)))
+
     raise NotImplementedError(
-        f"El computo de '{ind_id}' aun no esta implementado (hoy solo HV)."
+        f"El computo de '{ind_id}' aun no esta implementado."
     )
 
 
@@ -100,3 +129,24 @@ def _hv_pymoo(puntos: np.ndarray, punto_ref: np.ndarray) -> float:
     P = np.asarray(puntos, dtype=float)
     ref = np.asarray(punto_ref, dtype=float)
     return float(HV(ref_point=ref)(P))
+
+
+def _eps_plus_aditivo(puntos: np.ndarray, ref: np.ndarray) -> float:
+    """
+    Indicador epsilon ADITIVO unario I_eps+(A, R) para MINIMIZACION, calculado con
+    numpy porque esta version de pymoo (0.6.1.x) no trae `pymoo.indicators.epsilon`.
+
+        I_eps+ = max_{r in R} min_{a in A} max_i (a_i - r_i)
+
+    Es el minimo desplazamiento aditivo eps tal que cada punto r del frente de
+    referencia R queda (debilmente) eps-dominado por algun punto a del PFA A
+    (a_i - eps <= r_i para todo objetivo i). Puede ser negativo si A cubre a R con
+    holgura. Menor es mejor; 0 si A cubre exactamente a R.
+    """
+    A = np.asarray(puntos, dtype=float)
+    R = np.asarray(ref, dtype=float)
+    # diff[a, r, i] = A[a, i] - R[r, i]
+    diff = A[:, None, :] - R[None, :, :]
+    por_objetivo = diff.max(axis=2)     # eps que cada a necesita para eps-dominar cada r
+    por_ref = por_objetivo.min(axis=0)  # mejor a para cubrir cada r
+    return float(por_ref.max())         # peor r
