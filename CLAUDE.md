@@ -54,16 +54,17 @@ ui/                        PRESENTACIÓN (única capa que importa streamlit)
 domain/                    DOMINIO (lógica, sin streamlit)
   model.py                   dataclasses: PFA, MapeoArchivo, ConfigCSV, Proyecto
   services.py                FACHADA hacia data/ (lo que consume la UI)
-  indicators.py              catálogo de indicadores + calcular() [STUB]
-  preprocessing.py           filtrado/normalización/nadir [STUBS]
-  statistics.py              agregación + pruebas [STUBS]
+  indicators.py              catálogo + calcular(): HV/IGD/IGD+/ε+/Δp HECHO; R2/Riesz/SPD STUB
+  preprocessing.py           no dominadas / duplicados / ideal-nadir / normalizar — HECHO
+  evaluacion.py              MOTOR: corre indicadores por corrida y agrupa por escenario — HECHO
+  statistics.py              resumen + corrida mediana + significancia PREVIEW — HECHO
   tables.py                  construcción/exportación de tablas [parcial/STUB]
   figures.py                 matplotlib headless (motor único de gráficas)
   mock.py                    generadores de ejemplo (DESHABILITADOS)
 data/                      DATOS (sin streamlit; solo domain.model)
-  csv_io.py                  lector real de .pof (disco y .zip) — HECHO
+  csv_io.py                  lector de .pof (disco/.zip) + frentes de referencia (auto/override) — HECHO
   persistence.py             proyecto en SQLite [STUB]
-tests/                     pytest (de momento, el lector de .pof)
+tests/                     pytest: .pof, indicadores, evaluación y estadística (57 pasan)
 CreateIndicator/           createIndicatorTable.R — SCRIPT DEL DOCTOR (ver §5)
 MOEA-visualization-main/   frentes de referencia + plots de referencia (ver §4)
 data_ejemplo/              7 .pof de muestra para tests (datos, no código)
@@ -78,18 +79,27 @@ papers/                    PDFs de referencia (no código)
 |---|---|---|
 | Ingesta de `.zip` y `.pof` (lectura + validación cruzada) | **HECHO** | `data/csv_io.py`, `domain/services.py`, `ui/steps/paso_datos.py` |
 | Vista previa de un PFA real + **graficado básico 2D/3D** | **HECHO** | `paso_datos.py`, `paso_visualizacion.py`, `domain/figures.py` |
-| Gráfica del frente de la **MEDIANA** (la que pide el doc) | **PENDIENTE** (depende de tener el indicador calculado) | `paso_visualizacion.py` |
 | Catálogo de indicadores (HV, IGD, IGD+, R2, Δp, ε+, Riesz, SPD) | **HECHO** | `domain/indicators.py` (`CATALOGO`) |
-| **Cómputo** de indicadores (`calcular`) | **STUB** | `domain/indicators.py` (devuelve mock) |
-| Preprocesamiento (no dominadas, nadir, normalizar) | **STUB** | `domain/preprocessing.py` |
-| Estadística (Wilcoxon/Mann-Whitney/Friedman, ranking) | **STUB** | `domain/statistics.py` |
-| Tablas de resultados (medias por (MOEA,MOP)) | **STUB** | `domain/tables.py` (usa `mock`) |
+| **Cómputo** de indicadores: HV, IGD, IGD+, ε+, Δp | **HECHO** (Δp = Δ1 hoy: el exponente `p` está **inerte**) | `domain/indicators.py` |
+| Cómputo de R2 / Riesz / SPD | **POSPUESTO** (lanzan `NotImplementedError`) | `domain/indicators.py` |
+| Preprocesamiento (no dominadas, duplicados, ideal-nadir, normalizar) | **HECHO** | `domain/preprocessing.py` |
+| Frentes de referencia: automáticos + **override** por `.zip` del usuario | **HECHO** | `data/csv_io.py` (ver §4) |
+| **Motor** de evaluación (indicadores por corrida, agrupados por escenario) | **HECHO** | `domain/evaluacion.py` (`evaluar`) |
+| Estadística: `resumen`, `corrida_mediana`, `significancia` (PREVIEW Mann-Whitney) | **HECHO** | `domain/statistics.py` |
+| **Exportador** al formato/ruta del script R (un valor por corrida) | **HECHO** | `domain/exportar_r.py` (`exportar`) |
+| Conexión del motor + estadística a la **UI** (Paso 3) | **PENDIENTE** | `ui/steps/paso_resultados.py` |
+| Gráfica del frente de la **MEDIANA** (la que pide el doc) | **PENDIENTE** (el índice ya lo da `statistics.corrida_mediana`; falta graficarlo) | `paso_visualizacion.py` |
+| Tablas de resultados (medias por (MOEA,MOP)) | **STUB** (usa `mock`) | `domain/tables.py` |
 | Persistencia del proyecto (SQLite) | **STUB** | `data/persistence.py` |
-| Frentes de referencia (carga para indicadores de distancia) | **PENDIENTE** | ver §4 |
-| **Exportación** de valores por corrida para el script R | **PENDIENTE** | ver §5 |
 
-> Nota: `domain/mock.py` está deshabilitado a propósito; las piezas STUB que aún
-> lo usan (`tables.py`) mostrarán datos vacíos hasta conectarse al cómputo real.
+> Nota: `domain/mock.py` está deshabilitado a propósito; la pieza STUB que aún lo
+> usa (`tables.py`) mostrará datos vacíos hasta conectarse al motor real.
+
+> **Pendientes de confirmar con el doc** (decisiones de ingeniería tomadas por
+> ahora, no cerradas): **dirección de R2** (`MUST_MAXIMIZE`, ver §5); **exponente
+> `p` de Δp** (hoy inerte → Δ1); y la **política del punto de referencia de HV**
+> para la tabla (`evaluacion.py` usa `nadir*1.1` por escenario como default; ojo
+> con objetivos negativos como VNT2/VNT3).
 
 ---
 
@@ -135,13 +145,13 @@ MOEA-visualization-main/data/{MOP}_{dim:02d}D.pof   ej. DTLZ2_03D.pof, WFG3_03D.
 | VNT2  | **no directo** → vía `VIE2_03D.pof` | VIE2: 03D |
 | VNT3  | **no directo** → vía `VIE3_03D.pof` | VIE3: 03D |
 
-> `VNT2`/`VNT3` no tienen archivo propio: dependen del mapeo `VNT2→VIE2`,
-> `VNT3→VIE3` (**PENDIENTE confirmar con el doc**). Para `(MOP,m)` sin frente
+> `VNT2`/`VNT3` no tienen archivo propio: usan el mapeo `VNT2→VIE2`,
+> `VNT3→VIE3` (**CONFIRMADO con el doc**). Para `(MOP,m)` sin frente
 > exacto NO se sustituye por uno aproximado: se reporta como faltante.
 
-El campo `n` (de `N{N}`) tiene **rol semántico pendiente de confirmar con el doc**
-(¿tamaño de población o cardinalidad del frente?); ver también `card` en §5. No
-asumirlo hasta confirmarlo.
+El campo `n` (de `N{N}`) es el **tamaño de población** (**CONFIRMADO por el doc**);
+es una de las claves del "escenario" `(MOP, m, N)` que agrupa `domain/evaluacion.py`.
+Su relación con el `card` del script R (§5) sigue **pendiente de confirmar**.
 
 ---
 
@@ -222,5 +232,7 @@ py -m streamlit run app.py
 py -m pytest tests/ -v
 ```
 
-`requirements.txt` lista las dependencias (streamlit, numpy, pandas, matplotlib,
-jinja2; pytest para pruebas). `scipy`/`pymoo` están como FUTURO (cómputo real).
+`requirements.txt` lista las dependencias reales, ya **EN USO**: streamlit, numpy,
+pandas, matplotlib, jinja2, **pymoo 0.6.1.6** (HV/IGD/IGD+/Δp; import perezoso en
+`indicators.py`) y **scipy** (Mann-Whitney del PREVIEW; import perezoso en
+`statistics.py`); pytest para las pruebas.
