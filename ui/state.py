@@ -22,6 +22,9 @@ K_INDS = "indicadores_sel"  # ids de indicadores elegidos
 K_PFAS = "pfas_cargados"    # list[PFA] cargados desde el zip / .pof sueltos
 K_ERR = "pfas_errores"      # list[(archivo, motivo)] de los omitidos
 K_FIRMA = "_firma_subida"   # firma de los archivos ya procesados (evita reprocesar)
+K_FREJ = "frentes_ref_cargados"  # dict[(mop, m)] -> puntos del zip subido
+K_REF_ERR = "frentes_ref_errores"  # list[(archivo, motivo)] de los omitidos
+K_REF_FIRMA = "_firma_subida_ref"  # firma de los archivos de referencia ya procesados
 
 
 def init_estado() -> None:
@@ -34,6 +37,8 @@ def init_estado() -> None:
     st.session_state.setdefault(K_INDS, [])
     st.session_state.setdefault(K_PFAS, [])
     st.session_state.setdefault(K_ERR, [])
+    st.session_state.setdefault(K_FREJ, {})
+    st.session_state.setdefault(K_REF_ERR, [])
 
 
 def paso_actual() -> int:

@@ -296,15 +296,17 @@ def leer_frentes_de_zip(datos_zip, config: ConfigCSV | None = None,
     """
     Lee frentes de referencia SUBIDOS por el usuario en un .zip.
 
-    Estructura esperada: archivos .pof SUELTOS en la raiz del zip (sin subcarpetas),
-    con el patron EXACTO {MOP}_{m:02d}D.pof (el mismo de `nombre_frente_referencia`).
+        Estructura esperada: archivos .pof sueltos en la raiz del zip o dentro de una
+        carpeta `data/`, con el patron EXACTO {MOP}_{m:02d}D.pof (el mismo de
+        `nombre_frente_referencia`).
     El MOP del nombre es el token real del usuario (p. ej. VNT2, NO VIE2): el mapeo
     VNT->VIE es SOLO para la carpeta automatica.
 
     Devuelve ({(MOP, m): puntos}, omitidos), donde omitidos es una lista de
     (nombre, motivo). Un archivo malo se OMITE y REPORTA, no aborta el lote:
-    - no .pof / basura de Mac -> se ignoran en silencio;
-    - .pof en subcarpeta, con nombre invalido o prefijo de demo -> omitido con motivo;
+        - no .pof / basura de Mac -> se ignoran en silencio;
+        - .pof fuera de la raiz o de `data/`, con nombre invalido o prefijo de demo ->
+            omitido con motivo;
     - .pof que no se puede leer o cuyas columnas != m -> omitido con motivo.
     """
     config = config or ConfigCSV.preset_pof()
@@ -320,9 +322,10 @@ def leer_frentes_de_zip(datos_zip, config: ConfigCSV | None = None,
                 continue                       # no es .pof -> se ignora
             if _es_basura_mac(nombre, base):
                 continue                       # basura de Mac -> se ignora
-            if len([c for c in re.split(r"[\\/]", nombre) if c]) != 1:
+            componentes = [c for c in re.split(r"[\\/]", nombre) if c]
+            if len(componentes) > 1 and componentes[0].lower() != "data":
                 _reportar(omitidos, base, ValueError(
-                    "frente en subcarpeta; deben ir sueltos en la raiz del zip"))
+                    "frente en subcarpeta; deben ir en la raiz del zip o dentro de data/"))
                 continue
             coincide = _PATRON_REF.match(base)
             if base.startswith(_PREFIJOS_DEMO) or coincide is None:

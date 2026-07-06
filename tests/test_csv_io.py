@@ -186,6 +186,8 @@ def _armar_zip_frentes() -> bytes:
     with zipfile.ZipFile(buf, "w") as zf:
         # Valido: TOKEN del usuario (VNT2, NO VIE2), suelto en la raiz, 3 objetivos.
         zf.writestr("VNT2_03D.pof", b"# 2 3\n1.0 2.0 3.0 \n4.0 5.0 6.0 \n")
+        # Valido tambien dentro de data/.
+        zf.writestr("data/DTLZ2_03D.pof", b"# 1 3\n7.0 8.0 9.0 \n")
         # Nombre invalido: no casa {MOP}_{m:02d}D.pof -> se omite y reporta.
         zf.writestr("frente_malo.pof", b"# 1 2\n0.1 0.2 \n")
     return buf.getvalue()
@@ -193,8 +195,9 @@ def _armar_zip_frentes() -> bytes:
 
 def test_leer_frentes_de_zip_toma_valido_y_reporta_invalido():
     frentes, omitidos = csv_io.leer_frentes_de_zip(_armar_zip_frentes())
-    assert set(frentes) == {("VNT2", 3)}                  # token del usuario, sin mapear
+    assert set(frentes) == {("VNT2", 3), ("DTLZ2", 3)}  # token del usuario, sin mapear
     assert frentes[("VNT2", 3)].shape == (2, 3)
+    assert frentes[("DTLZ2", 3)].shape == (1, 3)
     assert [nombre for nombre, _ in omitidos] == ["frente_malo.pof"]
 
 
@@ -211,9 +214,9 @@ def test_leer_frente_referencia_override_gana_al_automatico():
 def test_cobertura_reporta_origen_usuario_vs_automatico():
     frentes, _ = csv_io.leer_frentes_de_zip(_armar_zip_frentes())
     filas = {(f["mop"], f["m"]): f for f in csv_io.cobertura_frentes_referencia(
-        [("VNT2", 3), ("DTLZ2", 3)], override=frentes)}
+        [("VNT2", 3), ("DTLZ7", 3)], override=frentes)}
     assert filas[("VNT2", 3)]["origen"] == "usuario"       # subido por el usuario
     assert filas[("VNT2", 3)]["disponible"] is True
     assert filas[("VNT2", 3)]["mop_ref"] == "VNT2"         # del usuario: sin mapeo VNT->VIE
-    assert filas[("DTLZ2", 3)]["origen"] == "automatico"   # no esta en el zip
-    assert filas[("DTLZ2", 3)]["disponible"] is True
+    assert filas[("DTLZ7", 3)]["origen"] == "automatico"   # no esta en el zip
+    assert filas[("DTLZ7", 3)]["disponible"] is True

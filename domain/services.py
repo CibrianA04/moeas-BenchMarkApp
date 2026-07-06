@@ -49,6 +49,12 @@ def cargar_pofs(archivos, config: ConfigCSV | None = None
     return pfas, errores
 
 
+def cargar_frentes_referencia_zip(zip_bytes, config: ConfigCSV | None = None
+                                  ) -> tuple[dict[tuple[str, int], object], list[tuple[str, str]]]:
+    """Procesa un .zip de frentes de referencia subido por el usuario."""
+    return csv_io.leer_frentes_de_zip(zip_bytes, config=config)
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 #  Vistas que consume la UI (sin que la UI importe 'data')
 # ─────────────────────────────────────────────────────────────────────────────
@@ -66,6 +72,14 @@ def preview_de_pfa(pfa: PFA, n: int = 8) -> pd.DataFrame:
     """Primeras 'n' filas (puntos REALES) del PFA, con columnas f1..fm."""
     columnas = [f"f{j + 1}" for j in range(pfa.m)]
     return pd.DataFrame(pfa.puntos[:n], columns=columnas)
+
+
+def cobertura_frentes_referencia(pares, dir_ref=None, mapeo: dict | None = None,
+                                 override: dict[tuple[str, int], object] | None = None) -> pd.DataFrame:
+    """Devuelve la cobertura de frentes de referencia como DataFrame."""
+    filas = csv_io.cobertura_frentes_referencia(pares, dir_ref=dir_ref,
+                                                mapeo=mapeo, override=override)
+    return pd.DataFrame(filas)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

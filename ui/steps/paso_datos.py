@@ -114,11 +114,51 @@ def render() -> None:
 
         st.markdown("#### Frentes de referencia")
         st.caption("Necesarios para indicadores basados en distancia "
-                   "(IGD, IGD+, R2, Delta p, Epsilon+).")
-        st.file_uploader("Subir frente(s) de referencia",
-                         type=["csv", "txt", "dat", "pf", "pof"],
-                         accept_multiple_files=True, key="up_ref")
-        df_ref = pd.DataFrame(columns=["MOP", "m", "archivo_referencia"])
+                   "(IGD, IGD+, R2, Delta p, Epsilon+). Sube un .zip con los "
+                   "POF sueltos en la raiz.")
+        ref_archivos = st.file_uploader(
+            "Subir frente(s) de referencia (.zip)",
+            type=["zip"],
+            accept_multiple_files=True, key="up_ref",
+            help="Cada archivo del zip debe llamarse {MOP}_{m:02d}D.pof y estar "
+                 "en la raiz del zip.",
+        ) or []
+
+        firma_ref = tuple(sorted((f.name, f.size) for f in ref_archivos))
+        if firma_ref != st.session_state.get(state.K_REF_FIRMA):
+            with st.spinner("Leyendo frentes de referencia..."):
+                frentes_ref, errores_ref = {}, []
+                for archivo in ref_archivos:
+                    datos = archivo.getvalue()
+                    if not archivo.name.lower().endswith(".zip"):
+                        errores_ref.append((archivo.name, "solo se acepta .zip"))
+                        continue
+                    p, e = services.cargar_frentes_referencia_zip(datos)
+                    frentes_ref.update(p)
+                    errores_ref += e
+            st.session_state[state.K_FREJ] = frentes_ref
+            st.session_state[state.K_REF_ERR] = errores_ref
+            st.session_state[state.K_REF_FIRMA] = firma_ref
+
+        frentes_ref = st.session_state.get(state.K_FREJ, {})
+        errores_ref = st.session_state.get(state.K_REF_ERR, [])
+
+        if ref_archivos:
+            if frentes_ref:
+                st.success(f"{len(frentes_ref)} frente(s) de referencia cargados"
+                           + (f"  ·  {len(errores_ref)} omitidos" if errores_ref else ""))
+            else:
+                st.error("No se cargo ningun frente de referencia valido.")
+            if errores_ref:
+                with st.expander(f"Ver {len(errores_ref)} archivo(s) de referencia omitido(s)"):
+                    st.dataframe(
+                        pd.DataFrame(errores_ref, columns=["archivo", "motivo"]),
+                        width="stretch", hide_index=True,
+                    )
+
+        pares_ref = list(frentes_ref)
+        df_ref = (services.cobertura_frentes_referencia(pares_ref, override=frentes_ref)
+                  if pares_ref else pd.DataFrame(columns=["mop", "m", "mop_ref", "archivo", "disponible", "origen"]))
         st.data_editor(df_ref, num_rows="dynamic", width="stretch",
                        hide_index=True, key="map_ref")
 
