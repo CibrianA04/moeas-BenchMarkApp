@@ -1,17 +1,20 @@
 # -*- coding: utf-8 -*-
 """
-Estadistica de apoyo para la UI y el graficado. NO es la fuente de la tabla final.
+Estadistica de apoyo para la UI, el graficado y la tabla de desempeno.
 
-Contrato (ver CLAUDE.md §5): la FUENTE UNICA de la tabla oficial (medias, Wilcoxon,
-ranking, LaTeX) es el script del doctor `createIndicatorTable.R`. Este modulo NO
-reimplementa ranking ni LaTeX; solo ofrece, consumiendo la salida de
+Contrato (ver CLAUDE.md §5): el script del doctor `createIndicatorTable.R` es el
+ORACULO contra el que se valida la tabla (via `exportar_r.py`); la app TRADUCE
+su logica a Python: aqui vive el ranking y en `domain/tables.py` la tabla
+LaTeX/CSV. Este modulo ofrece, consumiendo la salida de
 `evaluacion.evaluar` ({mop, m, N, moea, indicador, valores:[...por corrida...]}):
   (a) resumen():        media/desviacion por (MOP, m, N, indicador, MOEA) para la UI.
   (b) corrida_mediana(): la corrida MEDIANA por indicador (R no la da; hace falta
                          para graficar el frente "tipico").
-  (c) significancia():  un PREVIEW con la MISMA config del R (Mann-Whitney U, una
-                        cola hacia el ganador, alpha=0.05, sin correccion multiple).
-                        La tabla autoritativa la sigue dando R.
+  (c) significancia():  la MISMA config del R (Mann-Whitney U, una cola hacia el
+                        ganador, alpha=0.05, sin correccion multiple); de aqui
+                        salen las marcas '#' de la tabla.
+  (d) ranking() / rango_promedio(): el ranking por media del R (su order()
+                        estable) y el rango promedio (equivalente de _avgRank.txt).
 
 Eleccion de prueba SEGUN ESCENARIO (referencia):
     - pareado       -> Wilcoxon (rangos con signo)
@@ -187,3 +190,59 @@ def significancia(resultados, alpha: float = 0.05) -> pd.DataFrame:
                 "significativo": bool(p <= alpha),   # NaN <= alpha -> False
             })
     return pd.DataFrame(filas, columns=_COLS_SIGNIF)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Ranking al estilo del script R (createIndicatorTable.R): posicion 1..k por
+#  media dentro de cada (MOP, m, N, indicador). El R queda como oraculo.
+# ─────────────────────────────────────────────────────────────────────────────
+_COLS_RANKING = ["mop", "m", "N", "indicador", "moea", "media", "rank"]
+
+
+def ranking(resultados) -> pd.DataFrame:
+    """
+    Rango 1..k de cada MOEA por (MOP, m, N, indicador), ordenando por media
+    segun CATALOGO[indicador].sentido ('max' -> mayor media primero; 'min' ->
+    menor media primero). rank 1 = mejor.
+
+    Empates: gana el MOEA que APARECE primero en `resultados` (sorted() es
+    estable tambien con reverse=True), replicando el order() estable del R
+    sobre su vector fijo de MOEAs. NO se desempata alfabeticamente.
+
+    El rank 1 coincide con el `ganador` de significancia() (misma media y
+    mismo sentido del CATALOGO).
+    """
+    # Agrupar por (MOP, m, N, indicador) -> [(moea, media)] en orden de aparicion.
+    grupos: dict[tuple, list[tuple[str, float]]] = {}
+    for r in resultados:
+        clave = (r["mop"], r["m"], r["N"], r["indicador"])
+        grupos.setdefault(clave, []).append(
+            (r["moea"], float(np.mean(r["valores"]))))
+
+    filas = []
+    for (mop, m, n_pob, indicador), items in grupos.items():
+        sentido = indicators.CATALOGO[indicador].sentido
+        orden = sorted(items, key=lambda t: t[1], reverse=(sentido == "max"))
+        for pos, (moea, media) in enumerate(orden, start=1):
+            filas.append({
+                "mop": mop, "m": m, "N": n_pob, "indicador": indicador,
+                "moea": moea, "media": media, "rank": pos,
+            })
+    return pd.DataFrame(filas, columns=_COLS_RANKING)
+
+
+_COLS_RANGO_PROMEDIO = ["indicador", "moea", "rank_promedio"]
+
+
+def rango_promedio(ranking: pd.DataFrame) -> pd.DataFrame:
+    """
+    Rango promedio por MOEA dentro de cada indicador (media de `rank` sobre
+    todos los (MOP, m, N)). Equivalente del `*_avgRank.txt` del script R;
+    insumo del ranking promedio / CD plot. `ranking` = salida de ranking().
+    """
+    if ranking.empty:
+        return pd.DataFrame(columns=_COLS_RANGO_PROMEDIO)
+    prom = (ranking.groupby(["indicador", "moea"], sort=False)["rank"]
+                   .mean().reset_index()
+                   .rename(columns={"rank": "rank_promedio"}))
+    return prom[_COLS_RANGO_PROMEDIO]
