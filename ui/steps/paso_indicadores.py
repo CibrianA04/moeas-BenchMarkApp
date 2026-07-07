@@ -5,9 +5,10 @@ desbloquea el paso de Resultados.
 """
 from __future__ import annotations
 
+import numpy as np
 import streamlit as st
 
-from domain import indicators
+from domain import evaluacion, indicators
 from .. import state
 
 # Texto para el atributo de Pareto-compliance (primera clase).
@@ -16,6 +17,57 @@ _COMP = {
     "weak": "WEAK Pareto-compliant",
     "no": "NO Pareto-compliant",
 }
+
+# Mapeo del widget de HV (radio del expander) al hv_modo de evaluacion.evaluar.
+_HV_MODO = {
+    "Automatico (nadir)": "nadir",
+    "1.1 x nadir": "nadir_x1.1",
+    "Manual": "fijo",
+}
+
+
+def _evaluar(seleccion: list[str]) -> None:
+    """
+    Corre el MOTOR con la seleccion sobre los PFA cargados. Si va bien, guarda
+    resultados/omitidos y avanza al Paso 3; si falla por un error de USO
+    (ValueError de evaluar) o de datos, lo muestra y NO avanza.
+    """
+    pfas = st.session_state.get(state.K_PFAS, [])
+    if not pfas:
+        st.error("No hay PFA cargados. Vuelve al Paso 1 (Datos) y sube tus "
+                 ".pof o .zip antes de evaluar.")
+        return
+
+    # Punto de referencia de HV: solo se lee su widget si se pidio HV.
+    hv_modo, hv_punto_fijo = "nadir_x1.1", None
+    if "HV" in seleccion:
+        hv_modo = _HV_MODO.get(st.session_state.get("hv_HV"), "nadir_x1.1")
+        if hv_modo == "fijo":
+            crudo = st.session_state.get("hvvec_HV", "")
+            try:
+                hv_punto_fijo = np.array(
+                    [float(x) for x in crudo.split(",") if x.strip()], dtype=float)
+            except ValueError:
+                st.error("Vector de referencia de HV invalido: usa numeros "
+                         "separados por coma (p. ej. 1.1, 1.1, 1.1).")
+                return
+
+    try:
+        resultados, omitidos = evaluacion.evaluar(
+            pfas, seleccion,
+            override=st.session_state.get(state.K_FREJ) or None,
+            hv_modo=hv_modo, hv_punto_fijo=hv_punto_fijo)
+    except ValueError as e:
+        st.error(f"No se pudo evaluar: {e}. Sugerencia: usa 'Automatico' o "
+                 "'1.1 x nadir' si el lote mezcla m.")
+        return
+
+    st.session_state[state.K_RES] = resultados
+    st.session_state[state.K_OMIT] = omitidos
+    st.session_state[state.K_INDS] = seleccion
+    state.completar(1)
+    state.ir_a(2)
+    st.rerun()
 
 
 def render() -> None:
@@ -73,8 +125,4 @@ def render() -> None:
         st.rerun()
     if c_eval.button("Evaluar indicadores", type="primary", width="stretch",
                      disabled=not seleccion):
-        # FUTURO: recorrer (MOEA, MOP, corrida, PFA) y calcular cada indicador.
-        st.session_state[state.K_INDS] = seleccion
-        state.completar(1)
-        state.ir_a(2)
-        st.rerun()
+        _evaluar(seleccion)

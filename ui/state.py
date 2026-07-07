@@ -25,6 +25,8 @@ K_FIRMA = "_firma_subida"   # firma de los archivos ya procesados (evita reproce
 K_FREJ = "frentes_ref_cargados"  # dict[(mop, m)] -> puntos del zip subido
 K_REF_ERR = "frentes_ref_errores"  # list[(archivo, motivo)] de los omitidos
 K_REF_FIRMA = "_firma_subida_ref"  # firma de los archivos de referencia ya procesados
+K_RES = "resultados_eval"   # list[dict] de evaluacion.evaluar (valores por corrida)
+K_OMIT = "omitidos_eval"    # list[dict] de lo que el motor NO calculo (con motivo)
 
 
 def init_estado() -> None:
@@ -39,6 +41,8 @@ def init_estado() -> None:
     st.session_state.setdefault(K_ERR, [])
     st.session_state.setdefault(K_FREJ, {})
     st.session_state.setdefault(K_REF_ERR, [])
+    st.session_state.setdefault(K_RES, [])
+    st.session_state.setdefault(K_OMIT, [])
 
 
 def paso_actual() -> int:

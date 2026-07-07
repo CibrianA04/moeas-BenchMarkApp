@@ -35,15 +35,26 @@ def placeholder(titulo: str, descripcion: str = "") -> None:
             st.caption(descripcion)
 
 
-def descargas(clave: str, formatos: list[str]) -> None:
+def descargas(clave: str, formatos: list[str],
+              datos_por_formato: dict[str, tuple[bytes, str, str]] | None = None
+              ) -> None:
     """
     Selector de formato + boton de descarga.
 
     El PRIMER formato de la lista es el que sale por DEFECTO (p. ej. PNG en
-    figuras, CSV en tablas); el usuario puede elegir cualquier otro. En la
-    maqueta el boton esta deshabilitado (aun no hay datos que exportar).
+    figuras, CSV en tablas); el usuario puede elegir cualquier otro.
+
+    `datos_por_formato`: {formato: (datos_bytes, nombre_archivo, mime)}. Si el
+    formato elegido trae datos, se dibuja un `st.download_button` REAL; si no
+    (o si es None), el boton queda deshabilitado (formato aun sin exportar).
     """
     c1, c2 = st.columns([1, 2])
-    c1.selectbox("Formato", formatos, key=f"fmt_{clave}")
-    c2.button("Descargar", key=f"dl_{clave}", disabled=True, width="stretch",
-              help="Se habilitara cuando haya datos para exportar.")
+    fmt = c1.selectbox("Formato", formatos, key=f"fmt_{clave}")
+    datos = (datos_por_formato or {}).get(fmt)
+    if datos is not None:
+        contenido, nombre, mime = datos
+        c2.download_button("Descargar", data=contenido, file_name=nombre,
+                           mime=mime, key=f"dl_{clave}", width="stretch")
+    else:
+        c2.button("Descargar", key=f"dl_{clave}", disabled=True, width="stretch",
+                  help="Se habilitara cuando haya datos para exportar.")
