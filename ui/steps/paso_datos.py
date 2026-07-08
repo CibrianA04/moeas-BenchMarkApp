@@ -95,8 +95,12 @@ def render() -> None:
                         width="stretch", hide_index=True,
                     )
         elif pfas:
-            st.caption(f"{len(pfas)} PFA ya cargados · vuelve a subir solo si "
-                       "quieres reemplazarlos.")
+            # El chip del uploader no se puede repoblar tras navegar (limitacion
+            # de streamlit): aviso VISIBLE con los conteos reales del estado
+            # para que el uploader vacio no parezca "se perdio todo".
+            omitidos_txt = f" ({len(errores)} omitidos)" if errores else ""
+            st.success(f"✓ {len(pfas)} PFA ya cargados{omitidos_txt}. "
+                       "Sube de nuevo solo si quieres reemplazar.")
 
         st.markdown("#### 2) Mapeo (MOEA / MOP / m / n / corrida)")
         st.caption("Autocompletado desde el nombre de cada archivo "
@@ -174,8 +178,9 @@ def render() -> None:
             else:
                 st.error("No se cargo ningun frente de referencia valido.")
         elif frentes_ref:
-            st.caption(f"{len(frentes_ref)} frente(s) de referencia ya cargados · "
-                       "vuelve a subir solo si quieres reemplazarlos.")
+            # Mismo aviso visible que en los PFAs: el chip vacio no es perdida.
+            st.success(f"✓ {len(frentes_ref)} frentes de referencia ya cargados. "
+                       "Sube de nuevo solo para reemplazar.")
             if errores_ref:
                 with st.expander(f"Ver {len(errores_ref)} archivo(s) de referencia omitido(s)"):
                     st.dataframe(
