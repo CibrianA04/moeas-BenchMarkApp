@@ -11,7 +11,7 @@ import numpy as np
 import pytest
 
 from data import csv_io
-from domain import evaluacion
+from domain import evaluacion, indicators
 from domain.model import PFA
 
 RAIZ = Path(__file__).resolve().parents[1]
@@ -94,6 +94,60 @@ def test_evaluar_sin_referencia_omite_distancia_pero_calcula_hv():
     assert len(sin_ref) == 1
     assert (sin_ref[0]["mop"], sin_ref[0]["m"], sin_ref[0]["N"]) == ("NOEXISTE", 2, 8)
     assert "IGD" in sin_ref[0]["indicadores_omitidos"]
+
+
+# ── Punto de referencia de HV (_punto_hv) ────────────────────────────────────
+def _grupo(puntos_por_corrida, mop="X") -> list[PFA]:
+    """Un escenario sintetico: una lista de PFA (una matriz de puntos por corrida)."""
+    return [
+        PFA(moea="A", mop=mop, m=p.shape[1], n=p.shape[0], corrida=i,
+            puntos=np.asarray(p, dtype=float),
+            archivo=f"A_{mop}_{p.shape[1]:02d}D_N{p.shape[0]}_R{i:02d}.pof")
+        for i, p in enumerate(puntos_por_corrida, start=1)
+    ]
+
+
+def test_punto_hv_con_objetivos_negativos_domina_al_nadir_y_hv_positivo():
+    # Regresion (imita VNT2/VNT3): objetivos en [-5, -1]. Con nadir*1.1 literal el
+    # punto quedaba DOMINADO y HV = 0; con margen sobre el rango queda > nadir.
+    c1 = np.array([[-5.0, -1.0], [-3.0, -3.0], [-1.0, -5.0]])
+    c2 = c1 + 0.5                                    # segunda corrida (union)
+    grupo = _grupo([c1, c2])
+    punto = evaluacion._punto_hv(grupo, "nadir_x1.1", None, 2)
+    nadir = np.vstack([c1, c2]).max(axis=0)
+    assert np.all(punto > nadir)                     # domina en CADA componente
+    hv = indicators.calcular("HV", c1, punto_ref=punto)
+    assert np.isfinite(hv) and hv > 0.0
+
+
+def test_evaluar_hv_con_objetivos_negativos_es_positivo():
+    # End-to-end del bug: evaluar() con el modo default sobre un frente negativo
+    # (MOP sin frente de referencia: HV no lo necesita) debe dar HV > 0.
+    puntos = np.array([[-5.0, -1.0], [-3.0, -3.0], [-1.0, -5.0]])
+    resultados, _ = evaluacion.evaluar(_grupo([puntos], mop="NEGATIVO"), ["HV"])
+    assert len(resultados) == 1
+    assert all(np.isfinite(v) and v > 0.0 for v in resultados[0]["valores"])
+
+
+def test_punto_hv_equivale_a_nadir_x1_1_solo_si_ideal_es_cero():
+    # Con ideal == 0 en TODAS las columnas: nadir + 0.1*(nadir - 0) == nadir*1.1.
+    con_origen = np.array([[0.0, 4.0], [2.0, 0.0]])
+    punto = evaluacion._punto_hv(_grupo([con_origen]), "nadir_x1.1", None, 2)
+    assert punto == pytest.approx(con_origen.max(axis=0) * 1.1)
+
+    # Con ideal != 0 NO se afirma igualdad con nadir*1.1: solo que supera al nadir.
+    desplazado = np.array([[1.0, 3.0], [2.0, 2.0]])
+    punto = evaluacion._punto_hv(_grupo([desplazado]), "nadir_x1.1", None, 2)
+    assert np.all(punto > desplazado.max(axis=0))
+
+
+def test_punto_hv_modos_nadir_y_fijo_intactos():
+    puntos = np.array([[-5.0, 1.0], [-3.0, 3.0]])
+    grupo = _grupo([puntos])
+    crudo = evaluacion._punto_hv(grupo, "nadir", None, 2)
+    assert crudo == pytest.approx(puntos.max(axis=0))          # max crudo, sin margen
+    fijo = evaluacion._punto_hv(grupo, "fijo", [7.0, 8.0], 2)
+    assert fijo == pytest.approx([7.0, 8.0])                   # el vector dado tal cual
 
 
 # ── Prioridad del override (frente subido por el usuario) ─────────────────────

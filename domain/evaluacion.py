@@ -11,11 +11,14 @@ Escenario = (MOP, m, N). N = tamano de poblacion (confirmado). Todas las corrida
 de un mismo escenario comparten UN frente de referencia y UN punto de referencia
 de HV, para que sus valores sean comparables entre si.
 
-Politica del punto de referencia de HV (nadir / nadir*1.1 / fijo): es una eleccion
-de INGENIERIA para hacer comparables las corridas, PENDIENTE de confirmar con el
-doc. Aviso: con objetivos NEGATIVOS (p. ej. VNT2/VNT3) multiplicar el nadir por
-1.1 desplaza el punto en el sentido EQUIVOCADO (lo hace dominado), por lo que esa
-convencion queda especialmente sujeta a revision.
+Politica del punto de referencia de HV (nadir / margen sobre el rango / fijo): es
+una eleccion de INGENIERIA para hacer comparables las corridas, PENDIENTE de
+confirmar con el doc. El modo default "nadir_x1.1" calcula en realidad
+nadir + 0.1*(nadir - ideal): un margen del 10% del RANGO por objetivo, robusto al
+signo (multiplicar el nadir por 1.1 literal, con objetivos NEGATIVOS como
+VNT2/VNT3, desplazaba el punto en el sentido EQUIVOCADO -> quedaba dominado y
+HV = 0). Equivale a nadir*1.1 solo si ideal = 0 en cada objetivo. La clave del
+modo conserva su nombre historico para no romper llamadas ni el mapeo de la UI.
 """
 from __future__ import annotations
 
@@ -36,8 +39,12 @@ def _punto_hv(grupo: list[PFA], hv_modo: str, hv_punto_fijo, m: int) -> np.ndarr
 
     - "nadir":      nadir (max por objetivo) sobre la UNION de todos los puntos del
                     escenario (todas las corridas y todos los MOEAs).
-    - "nadir_x1.1": ese nadir * 1.1 (DEFAULT). Ver el aviso sobre objetivos negativos
-                    en el docstring del modulo: politica PENDIENTE de confirmar.
+    - "nadir_x1.1": nadir + 0.1*(nadir - ideal) sobre esa union (DEFAULT): margen
+                    del 10% del RANGO por objetivo, robusto al signo (con objetivos
+                    negativos el nadir*1.1 literal quedaba dominado y HV = 0).
+                    Equivale a nadir*1.1 solo si ideal = 0. Politica PENDIENTE de
+                    confirmar con el doc; la clave conserva su nombre historico
+                    (renombrarla es opcional/futuro).
     - "fijo":       usa `hv_punto_fijo` (vector de longitud m).
     """
     if hv_modo == "fijo":
@@ -50,7 +57,12 @@ def _punto_hv(grupo: list[PFA], hv_modo: str, hv_punto_fijo, m: int) -> np.ndarr
 
     union = np.vstack([np.asarray(p.puntos, dtype=float) for p in grupo])
     nadir = union.max(axis=0)
-    return nadir * 1.1 if hv_modo == "nadir_x1.1" else nadir
+    if hv_modo == "nadir_x1.1":
+        # Margen del 10% del rango: el offset es >= 0 en cada componente
+        # (nadir - ideal >= 0), asi el punto domina al nadir con o sin negativos.
+        ideal = union.min(axis=0)
+        return nadir + 0.1 * (nadir - ideal)
+    return nadir
 
 
 def evaluar(pfas: list[PFA], indicadores_ids: list[str],
