@@ -32,6 +32,22 @@ def _procesar_subida(archivos) -> tuple[list, list]:
     return pfas, errores
 
 
+def _debe_reprocesar(archivos, firma_nueva, firma_guardada, hay_datos) -> bool:
+    """
+    PURA (testeable): decide si la subida debe (re)procesarse y sobrescribir el
+    estado. Solo cuando hay archivos DE VERDAD.
+
+    - Uploader VACIO: nunca pisa el estado. Al volver al paso, streamlit lo
+      remonta vacio (archivos = [], firma = ()) y sin esta guarda se reprocesaba
+      con lista vacia y se perdian los PFAs/frentes ya cargados.
+    - Con archivos: procesa si la firma cambio, o si NO hay datos cargados
+      aunque la firma coincida (autorrepara un estado vacio con firma vieja).
+    """
+    if not archivos:
+        return False          # vacio: conservar lo cargado (o no hay nada que hacer)
+    return firma_nueva != firma_guardada or not hay_datos
+
+
 def render() -> None:
     st.subheader("Paso 1 · Carga y organizacion de datos")
     st.caption(
@@ -51,9 +67,11 @@ def render() -> None:
                  "dentro. Tambien aceptamos .pof sueltos para pruebas.",
         ) or []
 
-        # Procesa SOLO cuando cambia el conjunto de archivos (evita reprocesar).
+        # Procesa SOLO con archivos nuevos de verdad: un uploader vacio (se
+        # remonta asi al volver al paso) NUNCA sobrescribe lo ya cargado.
         firma = tuple(sorted((f.name, f.size) for f in archivos))
-        if firma != st.session_state.get(state.K_FIRMA):
+        if _debe_reprocesar(archivos, firma, st.session_state.get(state.K_FIRMA),
+                            bool(st.session_state.get(state.K_PFAS))):
             with st.spinner("Leyendo y validando archivos..."):
                 pfas, errores = _procesar_subida(archivos)
             st.session_state[state.K_PFAS] = pfas
@@ -76,6 +94,9 @@ def render() -> None:
                         pd.DataFrame(errores, columns=["archivo", "motivo"]),
                         width="stretch", hide_index=True,
                     )
+        elif pfas:
+            st.caption(f"{len(pfas)} PFA ya cargados · vuelve a subir solo si "
+                       "quieres reemplazarlos.")
 
         st.markdown("#### 2) Mapeo (MOEA / MOP / m / n / corrida)")
         st.caption("Autocompletado desde el nombre de cada archivo "
@@ -124,8 +145,11 @@ def render() -> None:
                  "en la raiz del zip.",
         ) or []
 
+        # Misma guarda que arriba: el uploader vacio no pisa los frentes cargados.
         firma_ref = tuple(sorted((f.name, f.size) for f in ref_archivos))
-        if firma_ref != st.session_state.get(state.K_REF_FIRMA):
+        if _debe_reprocesar(ref_archivos, firma_ref,
+                            st.session_state.get(state.K_REF_FIRMA),
+                            bool(st.session_state.get(state.K_FREJ))):
             with st.spinner("Leyendo frentes de referencia..."):
                 frentes_ref, errores_ref = {}, []
                 for archivo in ref_archivos:
@@ -149,6 +173,9 @@ def render() -> None:
                            + (f"  ·  {len(errores_ref)} omitidos" if errores_ref else ""))
             else:
                 st.error("No se cargo ningun frente de referencia valido.")
+        elif frentes_ref:
+            st.caption(f"{len(frentes_ref)} frente(s) de referencia ya cargados · "
+                       "vuelve a subir solo si quieres reemplazarlos.")
             if errores_ref:
                 with st.expander(f"Ver {len(errores_ref)} archivo(s) de referencia omitido(s)"):
                     st.dataframe(
