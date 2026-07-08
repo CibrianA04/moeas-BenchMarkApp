@@ -118,6 +118,55 @@ def calcular(ind_id: str, puntos: np.ndarray,
     )
 
 
+def preparar_indicadores(ids, ref) -> dict:
+    """
+    Evaluadores REUSABLES para un escenario: {ind_id: callable(P) -> float}.
+
+    Los indicadores basados en referencia construian IGD(ref)/GD(ref) POR
+    CORRIDA, re-procesando el frente (~10k puntos) cada vez. Aqui se construyen
+    UNA vez por escenario y se reusan entre corridas; "Dp" comparte el MISMO
+    objeto IGD que "IGD" (antes lo recalculaba). `calcular()` sigue siendo la
+    via por-llamada (tests, usos sueltos); el MOTOR (evaluacion.evaluar) usa esta.
+
+    - Cubre: IGD, IGD+, Eps+, Dp. HV NO entra: su punto de referencia depende
+      de la union del escenario y lo maneja el motor via calcular().
+    - Ids no cubiertos (p. ej. R2, pendiente de convencion) caen a calcular()
+      DENTRO del callable: el error se lanza por corrida, preservando la
+      semantica de `omitidos` del motor.
+    """
+    if ref is None:
+        raise ValueError("preparar_indicadores requiere un frente de referencia.")
+    R = np.asarray(ref, dtype=float)
+
+    igd_obj = None
+    if "IGD" in ids or "Dp" in ids:
+        from pymoo.indicators.igd import IGD                # import perezoso
+        igd_obj = IGD(R)
+
+    evaluadores: dict = {}
+    for ind_id in ids:
+        if ind_id == "IGD":
+            evaluadores[ind_id] = (
+                lambda P, _igd=igd_obj: float(_igd(np.asarray(P, dtype=float))))
+        elif ind_id == "IGD+":
+            from pymoo.indicators.igd_plus import IGDPlus   # import perezoso
+            igdp = IGDPlus(R)
+            evaluadores[ind_id] = (
+                lambda P, _igdp=igdp: float(_igdp(np.asarray(P, dtype=float))))
+        elif ind_id == "Eps+":
+            evaluadores[ind_id] = lambda P, _R=R: _eps_plus_aditivo(P, _R)
+        elif ind_id == "Dp":
+            from pymoo.indicators.gd import GD              # import perezoso
+            gd = GD(R)
+            evaluadores[ind_id] = (
+                lambda P, _gd=gd, _igd=igd_obj: max(
+                    float(_gd(np.asarray(P, dtype=float))),
+                    float(_igd(np.asarray(P, dtype=float)))))
+        else:
+            evaluadores[ind_id] = lambda P, _i=ind_id: calcular(_i, P, ref=R)
+    return evaluadores
+
+
 def _hv_pymoo(puntos: np.ndarray, punto_ref: np.ndarray) -> float:
     """
     Hypervolume via pymoo (minimizacion). `punto_ref` debe dominar (ser >= en cada

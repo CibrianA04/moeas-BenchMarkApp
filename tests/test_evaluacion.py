@@ -166,3 +166,31 @@ def test_evaluar_override_cambia_el_frente_usado():
     for moea in a:
         # Otro frente -> otros valores de IGD (se uso el del usuario).
         assert not np.allclose(a[moea], o[moea])
+
+
+# ── Evaluadores reusables por escenario + callback de progreso ────────────────
+def test_evaluar_reusables_mismos_valores_que_calcular():
+    # El motor ahora usa preparar_indicadores: debe dar EXACTAMENTE los mismos
+    # valores que el camino viejo (calcular por corrida) para IGD y Dp.
+    pfas = _pfas_dtlz2()
+    resultados, omitidos = evaluacion.evaluar(pfas, ["IGD", "Dp"])
+    assert omitidos == []
+    ref = csv_io.leer_frente_referencia("DTLZ2", 2)
+    for fila in resultados:
+        corridas = sorted((p for p in pfas if p.moea == fila["moea"]),
+                          key=lambda p: p.corrida)
+        esperados = [indicators.calcular(fila["indicador"], p.puntos, ref=ref)
+                     for p in corridas]
+        assert fila["valores"] == pytest.approx(esperados)
+
+
+def test_evaluar_progreso_una_vez_por_escenario():
+    # 2 escenarios (DTLZ2 y NOEXISTE) -> 2 invocaciones (hecho, total, etiqueta).
+    pfas = _pfas_dtlz2() + _pfas_sin_referencia()
+    eventos: list[tuple] = []
+    evaluacion.evaluar(pfas, ["HV"],
+                       progreso=lambda h, t, e: eventos.append((h, t, e)))
+    assert len(eventos) == 2
+    assert [h for h, _, _ in eventos] == [0, 1]            # al INICIO de cada uno
+    assert all(t == 2 for _, t, _ in eventos)
+    assert "DTLZ2" in eventos[0][2] and "NOEXISTE" in eventos[1][2]

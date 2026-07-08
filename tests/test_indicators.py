@@ -126,3 +126,37 @@ def test_ideal_nadir_y_normalizar():
     assert nadir.tolist() == [2.0, 30.0]
     Pn = preprocessing.normalizar(P, ideal, nadir)
     assert Pn.tolist() == [[0.0, 0.0], [1.0, 1.0]]
+
+
+# ── preparar_indicadores (evaluadores reusables por escenario) ───────────────
+_REF = np.array([[0.0, 1.0], [0.5, 0.5], [1.0, 0.0]])
+_P = np.array([[0.1, 0.9], [0.9, 0.2], [0.6, 0.7]])
+
+
+def test_preparar_indicadores_regresion_identica_a_calcular():
+    # El camino reusable debe dar EXACTAMENTE lo mismo que calcular() por llamada.
+    ev = indicators.preparar_indicadores(["IGD", "IGD+", "Eps+", "Dp"], _REF)
+    for ind_id in ("IGD", "IGD+", "Eps+", "Dp"):
+        assert ev[ind_id](_P) == pytest.approx(
+            indicators.calcular(ind_id, _P, ref=_REF)), ind_id
+
+
+def test_preparar_indicadores_dp_es_max_de_gd_e_igd():
+    from pymoo.indicators.gd import GD
+    from pymoo.indicators.igd import IGD
+    ev = indicators.preparar_indicadores(["Dp"], _REF)
+    esperado = max(float(GD(_REF)(_P)), float(IGD(_REF)(_P)))
+    assert ev["Dp"](_P) == pytest.approx(esperado)
+
+
+def test_preparar_indicadores_sin_ref_lanza_valueerror():
+    with pytest.raises(ValueError):
+        indicators.preparar_indicadores(["IGD"], None)
+
+
+def test_preparar_indicadores_id_no_cubierto_falla_por_corrida():
+    # R2 (pendiente) cae a calcular() DENTRO del callable: el error sale al
+    # invocarlo (por corrida), no al preparar (semantica de omitidos del motor).
+    ev = indicators.preparar_indicadores(["R2"], _REF)
+    with pytest.raises(NotImplementedError):
+        ev["R2"](_P)

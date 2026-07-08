@@ -22,6 +22,8 @@ modo conserva su nombre historico para no romper llamadas ni el mapeo de la UI.
 """
 from __future__ import annotations
 
+from typing import Callable
+
 import numpy as np
 
 from data import csv_io
@@ -68,6 +70,7 @@ def _punto_hv(grupo: list[PFA], hv_modo: str, hv_punto_fijo, m: int) -> np.ndarr
 def evaluar(pfas: list[PFA], indicadores_ids: list[str],
             override: dict[tuple[str, int], np.ndarray] | None = None,
             hv_modo: str = "nadir_x1.1", hv_punto_fijo=None,
+            progreso: Callable[[int, int, str], None] | None = None,
             ) -> tuple[list[dict], list[dict]]:
     """
     Calcula los indicadores `indicadores_ids` sobre cada corrida de `pfas`.
@@ -79,6 +82,9 @@ def evaluar(pfas: list[PFA], indicadores_ids: list[str],
       CUAL a `csv_io.leer_frente_referencia` (opcion A: el del usuario gana). None
       por defecto.
     - hv_modo / hv_punto_fijo: politica del punto de referencia de HV (ver `_punto_hv`).
+    - progreso: callback OPCIONAL (hecho, total, etiqueta), invocado UNA vez al
+      INICIO de cada escenario. La UI inyecta aqui su barra de progreso; este
+      modulo sigue headless (no importa streamlit).
 
     Devuelve (resultados, omitidos):
     - resultados: lista de dicts {mop, m, N, moea, indicador, valores:[...por corrida...]}.
@@ -112,8 +118,13 @@ def evaluar(pfas: list[PFA], indicadores_ids: list[str],
     resultados: list[dict] = []
     omitidos: list[dict] = []
 
-    for (mop, m, n), grupo in escenarios.items():
-        # 1) Frente de referencia: UNO por escenario (solo si hace falta).
+    total_escenarios = len(escenarios)
+    for idx, ((mop, m, n), grupo) in enumerate(escenarios.items()):
+        if progreso is not None:
+            progreso(idx, total_escenarios, f"{mop} · m={m} · N={n}")
+
+        # 1) Frente de referencia: UNO por escenario (solo si hace falta;
+        #    csv_io lo cachea por ruta, asi que repetir MOP no reparsea).
         frente = None
         if ids_requiere_ref:
             try:
@@ -137,6 +148,15 @@ def evaluar(pfas: list[PFA], indicadores_ids: list[str],
             if not (indicators.CATALOGO[i].requiere_ref and frente is None)
         ]
 
+        # 2b) Evaluadores basados en referencia: UNA construccion por escenario
+        #     (construir IGD(ref) por corrida re-procesaba el frente completo;
+        #     Dp ademas comparte el mismo objeto IGD). HV y los sin-referencia
+        #     siguen por calcular().
+        ids_con_ref = [i for i in ids_escenario
+                       if indicators.CATALOGO[i].requiere_ref]
+        evaluadores = (indicators.preparar_indicadores(ids_con_ref, frente)
+                       if ids_con_ref else {})
+
         # 3) Por MOEA (orden de aparicion), por indicador -> valores por corrida.
         por_moea: dict[str, list[PFA]] = {}
         for p in grupo:
@@ -148,8 +168,11 @@ def evaluar(pfas: list[PFA], indicadores_ids: list[str],
                 valores: list[float] = []
                 for p in corridas_ord:
                     try:
-                        v = indicators.calcular(
-                            ind_id, p.puntos, ref=frente, punto_ref=punto_hv)
+                        if ind_id in evaluadores:           # reusables (con ref)
+                            v = evaluadores[ind_id](p.puntos)
+                        else:                               # HV / sin referencia
+                            v = indicators.calcular(
+                                ind_id, p.puntos, ref=frente, punto_ref=punto_hv)
                     except Exception as exc:  # noqa: BLE001 (una corrida mala no aborta)
                         omitidos.append({
                             "tipo": "corrida_fallida", "mop": mop, "m": m, "N": n,

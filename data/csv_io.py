@@ -101,12 +101,13 @@ def leer_cabecera(fuente) -> tuple[int, int] | None:
 
 def _leer_dataframe(fuente, config: ConfigCSV) -> pd.DataFrame:
     """Lee SOLO los puntos (la cabecera '#' se salta como comentario)."""
+    # Motor C de pandas (default): soporta sep=r"\s+" de forma NATIVA, sin
+    # fallback ni ParserWarning, y es ~6x mas rapido que engine="python".
     return pd.read_csv(
         fuente,
         sep=config.separador,
         comment=(config.comentario or None),
         header=None,
-        engine="python",          # necesario para sep regex r"\s+"
         decimal=config.decimal,
     )
 
@@ -258,6 +259,14 @@ def iterar_pofs_zip(zip_fuente, config: ConfigCSV | None = None,
 # Carpeta por defecto (relativa a la raiz del repo: data/csv_io.py -> raiz).
 DIR_FRENTES_REF = Path(__file__).resolve().parents[1] / "MOEA-visualization-main" / "data"
 
+# Cache de frentes de referencia LEIDOS DE DISCO, por ruta resuelta: el motor
+# pedia el mismo frente (~10k puntos) escenario tras escenario y se reparseaba
+# cada vez. Solo se cachean lecturas EXITOSAS (nunca None ni errores); si cambia
+# la ruta (otro dir_ref), cambia la clave sola. El override del usuario ya vive
+# en memoria y NO pasa por aqui. Los llamadores tratan el ndarray como solo
+# lectura (los indicadores no lo mutan).
+_CACHE_FRENTES: dict[str, np.ndarray] = {}
+
 # Mapeo de nombre de MOP -> nombre del archivo de referencia. PENDIENTE confirmar
 # con el doc (VNT2/VNT3 no tienen archivo propio; se usan VIE2/VIE3).
 MAPEO_MOP_REF_DEFAULT = {"VNT2": "VIE2", "VNT3": "VIE3"}
@@ -273,6 +282,24 @@ def nombre_frente_referencia(mop: str, m: int, mapeo: dict | None = None) -> tup
     mapeo = MAPEO_MOP_REF_DEFAULT if mapeo is None else mapeo
     mop_ref = mapeo.get(mop, mop)
     return f"{mop_ref}_{m:02d}D.pof", mop_ref
+
+
+def _clave_override(override: dict | None, mop: str, m: int,
+                    mapeo: dict | None) -> tuple[str, int] | None:
+    """
+    Clave con la que (MOP, m) empareja en el override del usuario, o None.
+
+    Prueba primero el token REAL (p. ej. VNT2) y despues el MAPEADO (VIE2): el
+    doc nombra esos archivos con el token VIE, asi que el zip del usuario puede
+    traerlos con cualquiera de los dos nombres. La clave literal tiene prioridad.
+    """
+    if override is None:
+        return None
+    if (mop, m) in override:
+        return (mop, m)
+    mapeo = MAPEO_MOP_REF_DEFAULT if mapeo is None else mapeo
+    clave = (mapeo.get(mop, mop), m)
+    return clave if clave in override else None
 
 
 def _leer_puntos_ref(fuente, nombre: str, m: int,
@@ -299,8 +326,9 @@ def leer_frentes_de_zip(datos_zip, config: ConfigCSV | None = None,
         Estructura esperada: archivos .pof sueltos en la raiz del zip o dentro de una
         carpeta `data/`, con el patron EXACTO {MOP}_{m:02d}D.pof (el mismo de
         `nombre_frente_referencia`).
-    El MOP del nombre es el token real del usuario (p. ej. VNT2, NO VIE2): el mapeo
-    VNT->VIE es SOLO para la carpeta automatica.
+    El MOP de la clave es el token del NOMBRE del archivo tal cual (p. ej. VIE2 si
+    asi se llama). Al RESOLVER el override (leer_frente_referencia / cobertura) se
+    prueba tambien la clave mapeada: un VIE2_03D.pof subido empareja con VNT2.
 
     Devuelve ({(MOP, m): puntos}, omitidos), donde omitidos es una lista de
     (nombre, motivo). Un archivo malo se OMITE y REPORTA, no aborta el lote:
@@ -352,15 +380,20 @@ def leer_frente_referencia(mop: str, m: int, dir_ref=None,
     """
     Lee el frente de referencia de (MOP, m) -> matriz (R, m).
 
-    - PRIORIDAD del usuario (opcion A): si `override` trae (mop, m), devuelve ESE
-      frente (el subido por el usuario) sin tocar la carpeta automatica.
+    - PRIORIDAD del usuario (opcion A): si `override` trae (mop, m) — o la clave
+      MAPEADA (mop_ref, m), p. ej. un VIE2_03D.pof subido empareja con VNT2 —
+      devuelve ESE frente (el subido por el usuario) sin tocar la carpeta
+      automatica. La clave literal gana a la mapeada.
     - Si no, cae a la carpeta automatica como hoy (con mapeo VNT->VIE): acepta
       UNICAMENTE el patron exacto {MOP}_{m:02d}D.pof (rechaza sufijos y los prefijos
       de demo SLD_/INV_SLD_/LINEAR_). Si el archivo exacto no existe, lanza
       FileNotFoundError: NO sustituye por uno aproximado.
+    - Las lecturas de disco se CACHEAN por ruta resuelta (ver _CACHE_FRENTES):
+      pedir el mismo frente otra vez no reparsea el archivo.
     """
-    if override is not None and (mop, m) in override:
-        return np.asarray(override[(mop, m)], dtype=float)
+    clave = _clave_override(override, mop, m, mapeo)
+    if clave is not None:
+        return np.asarray(override[clave], dtype=float)
 
     dir_ref = Path(dir_ref) if dir_ref is not None else DIR_FRENTES_REF
     nombre, _ = nombre_frente_referencia(mop, m, mapeo)
@@ -378,8 +411,14 @@ def leer_frente_referencia(mop: str, m: int, dir_ref=None,
             f"busco '{nombre}' en {dir_ref}. No se sustituye por uno aproximado."
         )
 
+    clave_cache = str(ruta.resolve())
+    if clave_cache in _CACHE_FRENTES:
+        return _CACHE_FRENTES[clave_cache]
+
     config = config or ConfigCSV.preset_pof()
-    return _leer_puntos_ref(ruta, nombre, m, config)
+    puntos = _leer_puntos_ref(ruta, nombre, m, config)
+    _CACHE_FRENTES[clave_cache] = puntos          # solo lecturas exitosas
+    return puntos
 
 
 def cobertura_frentes_referencia(pares, dir_ref=None,
@@ -391,16 +430,19 @@ def cobertura_frentes_referencia(pares, dir_ref=None,
     Devuelve una lista de dicts: {mop, m, mop_ref, archivo, disponible, origen}.
 
     `origen` es "usuario" (viene de `override`, con PRIORIDAD) o "automatico" (de la
-    carpeta MOEA-visualization-main/data/). Para los del usuario el MOP no se mapea
-    (el token real es la clave), asi que mop_ref == mop.
+    carpeta MOEA-visualization-main/data/). Para los del usuario, mop_ref es la
+    clave con la que emparejo el override: el token real si coincide directo, o
+    el MAPEADO (p. ej. VIE2 para VNT2) si el archivo se subio con el nombre del doc.
     """
     dir_ref = Path(dir_ref) if dir_ref is not None else DIR_FRENTES_REF
     filas = []
     for mop, m in pares:
-        if override is not None and (mop, m) in override:
+        clave = _clave_override(override, mop, m, mapeo)
+        if clave is not None:
+            mop_ref = clave[0]
             filas.append({
-                "mop": mop, "m": m, "mop_ref": mop,
-                "archivo": f"{mop}_{m:02d}D.pof",
+                "mop": mop, "m": m, "mop_ref": mop_ref,
+                "archivo": f"{mop_ref}_{m:02d}D.pof",
                 "disponible": True, "origen": "usuario",
             })
             continue

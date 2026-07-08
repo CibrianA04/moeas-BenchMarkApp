@@ -73,15 +73,28 @@ def _evaluar(seleccion: list[str]) -> None:
                          "separados por coma (p. ej. 1.1, 1.1, 1.1).")
                 return
 
+    # Feedback en vivo: el motor invoca `progreso` al INICIO de cada escenario
+    # (evaluar puede tardar minutos con indicadores de distancia; sin esto la
+    # app parecia congelada).
+    barra = st.progress(0.0, text="Preparando evaluación...")
+
+    def _avance(hecho: int, total: int, etiqueta: str) -> None:
+        barra.progress(hecho / total if total else 0.0,
+                       text=f"Evaluando {etiqueta}  ({hecho + 1}/{total})")
+
     try:
-        resultados, omitidos = evaluacion.evaluar(
-            pfas, seleccion,
-            override=st.session_state.get(state.K_FREJ) or None,
-            hv_modo=hv_modo, hv_punto_fijo=hv_punto_fijo)
+        with st.spinner("Evaluando indicadores..."):
+            resultados, omitidos = evaluacion.evaluar(
+                pfas, seleccion,
+                override=st.session_state.get(state.K_FREJ) or None,
+                hv_modo=hv_modo, hv_punto_fijo=hv_punto_fijo,
+                progreso=_avance)
     except ValueError as e:
+        barra.empty()
         st.error(f"No se pudo evaluar: {e}. Sugerencia: usa 'Automatico' o "
                  "'1.1 x nadir' si el lote mezcla m.")
         return
+    barra.progress(1.0, text="Evaluación completada")
 
     st.session_state[state.K_RES] = resultados
     st.session_state[state.K_OMIT] = omitidos

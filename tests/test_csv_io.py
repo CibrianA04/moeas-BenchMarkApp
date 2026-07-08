@@ -217,6 +217,79 @@ def test_cobertura_reporta_origen_usuario_vs_automatico():
         [("VNT2", 3), ("DTLZ7", 3)], override=frentes)}
     assert filas[("VNT2", 3)]["origen"] == "usuario"       # subido por el usuario
     assert filas[("VNT2", 3)]["disponible"] is True
-    assert filas[("VNT2", 3)]["mop_ref"] == "VNT2"         # del usuario: sin mapeo VNT->VIE
+    assert filas[("VNT2", 3)]["mop_ref"] == "VNT2"         # emparejo directo, sin mapeo
     assert filas[("DTLZ7", 3)]["origen"] == "automatico"   # no esta en el zip
     assert filas[("DTLZ7", 3)]["disponible"] is True
+
+
+# ── Override con el nombre del doc (VIE2/VIE3 deben emparejar VNT2/VNT3) ──────
+def test_override_con_nombre_del_doc_vie_empareja_vnt(tmp_path):
+    # El doc nombra estos frentes VIE2_03D.pof: subido asi, queda con clave
+    # ("VIE2", 3) y ANTES no emparejaba con el escenario VNT2 (bug).
+    puntos = np.array([[-1.0, -2.0, -3.0], [-4.0, -5.0, -6.0]])
+    # dir_ref = carpeta vacia: si el override no emparejara, seria FileNotFoundError.
+    ref = csv_io.leer_frente_referencia("VNT2", 3, dir_ref=tmp_path,
+                                        override={("VIE2", 3): puntos})
+    assert np.array_equal(ref, puntos)
+
+
+def test_override_directo_sin_mapeo_no_regresa(tmp_path):
+    # Un MOP sin mapeo (DTLZ1) sigue emparejando por su clave literal.
+    puntos = np.array([[0.0, 1.0], [1.0, 0.0]])
+    ref = csv_io.leer_frente_referencia("DTLZ1", 2, dir_ref=tmp_path,
+                                        override={("DTLZ1", 2): puntos})
+    assert np.array_equal(ref, puntos)
+
+
+def test_override_clave_literal_gana_a_la_mapeada(tmp_path):
+    directo = np.array([[1.0, 1.0, 1.0]])
+    mapeado = np.array([[2.0, 2.0, 2.0]])
+    ref = csv_io.leer_frente_referencia(
+        "VNT2", 3, dir_ref=tmp_path,
+        override={("VNT2", 3): directo, ("VIE2", 3): mapeado})
+    assert np.array_equal(ref, directo)
+
+
+def test_cobertura_vnt_disponible_via_override_vie():
+    filas = {(f["mop"], f["m"]): f for f in csv_io.cobertura_frentes_referencia(
+        [("VNT2", 3)], override={("VIE2", 3): np.array([[-1.0, -2.0, -3.0]])})}
+    fila = filas[("VNT2", 3)]
+    assert fila["disponible"] is True
+    assert fila["origen"] == "usuario"
+    assert fila["mop_ref"] == "VIE2"                       # emparejo por la clave mapeada
+    assert fila["archivo"] == "VIE2_03D.pof"
+
+
+# ── Rendimiento: motor C de pandas y cache de frentes de referencia ───────────
+def test_leer_pfa_motor_c_sin_columna_nan(tmp_path):
+    # Espacio FINAL en cada linea (formato real de los .pof) + notacion
+    # cientifica: el motor C con sep=r"\s+" no debe meter columna NaN ni
+    # caer al motor python (ParserWarning -> error).
+    import warnings
+    ruta = tmp_path / "A_DTLZ2_02D_N3_R01.pof"
+    ruta.write_text("# 3 2\n0.1 0.9 \n0.5 0.5 \n0.9 1.0e-01 \n", encoding="utf-8")
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")                 # cualquier warning = fallo
+        pfa = csv_io.leer_pfa(ruta)
+    assert pfa.puntos.shape == (3, 2)                  # misma forma que antes
+    assert not np.isnan(pfa.puntos).any()              # sin columna NaN fantasma
+    assert pfa.puntos[2, 1] == pytest.approx(0.1)      # cientifica y valores OK
+
+
+def test_cache_frente_referencia_no_reparsea(monkeypatch):
+    csv_io._CACHE_FRENTES.clear()
+    llamadas = {"n": 0}
+    original = csv_io.pd.read_csv
+
+    def contado(*args, **kwargs):
+        llamadas["n"] += 1
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(csv_io.pd, "read_csv", contado)
+    r1 = csv_io.leer_frente_referencia("DTLZ2", 3)
+    r2 = csv_io.leer_frente_referencia("DTLZ2", 3)     # misma ruta -> cache
+    assert llamadas["n"] == 1
+    assert np.array_equal(r1, r2)
+    csv_io.leer_frente_referencia("DTLZ2", 2)          # otra ruta -> otra lectura
+    assert llamadas["n"] == 2
+    csv_io._CACHE_FRENTES.clear()
