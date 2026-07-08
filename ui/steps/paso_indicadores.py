@@ -25,6 +25,27 @@ _HV_MODO = {
     "Manual": "fijo",
 }
 
+# Indicadores con computo REAL hoy: R2/Riesz/SPD lanzan NotImplementedError en
+# domain.indicators.calcular, asi que NO se siembran por default (solo llenarian
+# 'omitidos' sin producir resultados). Siguen disponibles en el catalogo para
+# seleccionarlos a mano.
+_IMPLEMENTADOS = ("HV", "IGD", "IGD+", "Dp", "Eps+")
+
+# Clave del WIDGET multiselect. Streamlit la borra al desmontar el paso; la
+# copia persistente es state.K_INDS, que vuelve a sembrarla al regresar.
+_K_WIDGET_INDS = "inds_sel_widget"
+
+
+def _default_indicadores(persistido, implementados=_IMPLEMENTADOS) -> list[str]:
+    """
+    PURA (testeable): siembra del multiselect de indicadores. Restaura la
+    seleccion persistida (K_INDS) si existe; si viene vacia (o solo trae ids no
+    implementados), cae al default = indicadores implementados. NUNCA devuelve
+    ids fuera de `implementados` (p. ej. un R2 persistido de una sesion vieja).
+    """
+    base = [i for i in (persistido or []) if i in implementados]
+    return base if base else list(implementados)
+
 
 def _evaluar(seleccion: list[str]) -> None:
     """
@@ -79,12 +100,20 @@ def render() -> None:
     nombre_por_id = {m.id: m.nombre for m in todos}
 
     st.markdown("#### Indicadores a evaluar")
+    # El multiselect se desmonta al cambiar de paso y streamlit borra su clave:
+    # se siembra desde K_INDS (la copia persistente) solo cuando falta, y abajo
+    # se copia la seleccion de vuelta a K_INDS para restaurarla al volver.
+    # (key fijo + siembra previa, NO default= dinamico: cambiar default cambia
+    # la identidad del widget y se tragaria interacciones.)
+    if _K_WIDGET_INDS not in st.session_state:
+        st.session_state[_K_WIDGET_INDS] = _default_indicadores(
+            st.session_state.get(state.K_INDS))
     seleccion = st.multiselect(
         "Indicadores", options=[m.id for m in todos],
-        default=[m.id for m in todos if m.grupo == "principal"][:4],
         format_func=lambda i: nombre_por_id[i],
-        label_visibility="collapsed",
+        label_visibility="collapsed", key=_K_WIDGET_INDS,
     )
+    st.session_state[state.K_INDS] = seleccion
 
     st.divider()
     st.markdown("#### Parametros por indicador")
