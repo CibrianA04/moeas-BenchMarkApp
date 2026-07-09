@@ -146,6 +146,46 @@ def test_filtro_n_none_int_y_dict():
     assert canon[("N", "")].iloc[0] == 200
 
 
+# ── a_markdown_doc ───────────────────────────────────────────────────────────
+def test_markdown_cabecera_negritas_del_ganador_y_na():
+    est = tables.tabla_estructurada(_fixture(), "IGD")
+    md = tables.a_markdown_doc(est).decode("utf-8")
+    lineas = md.splitlines()
+    # Cabecera + separador de tabla pipe, y una linea por fila (MOP, m, N).
+    assert lineas[0] == "| MOP | m | N | Alg1 | Alg2 | Alg3 |"
+    assert lineas[1] == "| --- | --- | --- | --- | --- | --- |"
+    assert len(lineas) == 2 + 3
+    # Rank 1 (respeta el sentido min de IGD) en negritas; el perdedor no.
+    assert "**1.200e-02 (1.581e-03)**" in md
+    assert "| 1.200e-01 (1.581e-02) |" in md
+    assert "**1.200e-01" not in md
+    # Celda faltante (WFG3 x Alg3) -> N/A, nunca en negritas.
+    assert "| N/A |" in md
+    assert "**N/A**" not in md
+
+
+# ── tabla_display: aplanado headless para la vista de la UI ──────────────────
+def test_tabla_display_formato_na_y_mascara_rank1():
+    est = tables.tabla_estructurada(_fixture(), "IGD")
+    display, mask = tables.tabla_display(est, ["Alg1", "Alg2", "Alg3"])
+    assert list(display.columns) == ["MOP", "m", "N", "Alg1", "Alg2", "Alg3"]
+    assert list(mask.columns) == list(display.columns)
+
+    # Formato "media (desv)" en notacion cientifica (%.3e).
+    dtlz2 = display[(display["MOP"] == "DTLZ2") & (display["N"] == 100)].iloc[0]
+    assert dtlz2["Alg1"] == "1.200e-02 (1.581e-03)"
+    assert dtlz2["Alg2"] == "1.200e-01 (1.581e-02)"
+
+    # Celda sin datos (WFG3 x Alg3) -> "N/A".
+    wfg3 = display[display["MOP"] == "WFG3"].iloc[0]
+    assert wfg3["Alg3"] == "N/A"
+
+    # Mascara True SOLO en el rank 1 de cada fila (Alg1 gana las 3); las
+    # columnas indice y los demas MOEAs nunca se marcan.
+    assert mask["Alg1"].all()
+    assert not mask[["MOP", "m", "N", "Alg2", "Alg3"]].to_numpy().any()
+
+
 # ── a_csv_doc ────────────────────────────────────────────────────────────────
 def test_csv_largo_filas_y_columnas():
     est = tables.tabla_estructurada(_fixture(), "IGD")

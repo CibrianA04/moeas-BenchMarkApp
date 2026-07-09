@@ -14,39 +14,11 @@ import pandas as pd
 import streamlit as st
 
 from domain import indicators, statistics, tables
+from domain.tables import tabla_display
 from .. import components, state
 
 # Estilo del resaltado de la mejor media (rank 1) de cada fila.
 _RESALTE = "background-color: rgba(33, 150, 83, 0.35); font-weight: 700;"
-
-
-def tabla_display(est: pd.DataFrame,
-                  moeas: list[str]) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """
-    PURA (sin streamlit; testeable): aplana la tabla estructurada de
-    `tables.tabla_estructurada` a un DataFrame de presentacion + su mascara.
-
-    - display: columnas MOP, m, N + una por MOEA con "media (desv)" en notacion
-      cientifica, o "N/A" si falta el dato de esa (MOP, m, N, MOEA).
-    - mask: mismas columnas; True donde ese MOEA es rank 1 de la fila (para
-      resaltarlo). Las columnas MOP/m/N nunca se resaltan.
-    """
-    filas, marcas = [], []
-    for _, fila in est.iterrows():
-        d = {"MOP": fila[("MOP", "")], "m": fila[("m", "")], "N": fila[("N", "")]}
-        mk = {"MOP": False, "m": False, "N": False}
-        for mo in moeas:
-            rank = fila[(mo, "rank")]
-            if pd.isna(rank):
-                d[mo], mk[mo] = "N/A", False
-            else:
-                d[mo] = f"{fila[(mo, 'media')]:.3e} ({fila[(mo, 'desv')]:.3e})"
-                mk[mo] = int(rank) == 1
-        filas.append(d)
-        marcas.append(mk)
-    cols = ["MOP", "m", "N", *moeas]
-    return (pd.DataFrame(filas, columns=cols),
-            pd.DataFrame(marcas, columns=cols))
 
 
 def _mostrar_tabla(est: pd.DataFrame, moeas: list[str]) -> None:
@@ -77,6 +49,19 @@ def _mostrar_significancia(resultados: list[dict], ind_id: str,
     st.dataframe(vista, width="stretch", hide_index=True)
     st.caption("Mann-Whitney U de una cola hacia el ganador, alpha=0.05, sin "
                "correccion multiple (mismo criterio que la marca # de la tabla).")
+
+    # Descarga de la tabla mostrada (mismas filas/columnas que `vista`).
+    proyecto = st.session_state.get(state.K_PROY, "experimento")
+    base = f"{proyecto}_{ind_id}_significancia"
+    datos = {
+        "CSV": (vista.to_csv(index=False).encode("utf-8"),
+                f"{base}.csv", "text/csv"),
+        "Markdown": (vista.to_markdown(index=False).encode("utf-8"),
+                     f"{base}.md", "text/markdown"),
+        "LaTeX (.tex)": (vista.to_latex(index=False).encode("utf-8"),
+                         f"{base}.tex", "text/plain"),
+    }
+    components.descargas("significancia", list(datos), datos_por_formato=datos)
 
 
 def _mostrar_omitidos() -> None:
@@ -158,6 +143,8 @@ def render() -> None:
                 tables.a_latex_doc(est, ind_id, caption,
                                    f"tab:{ind_id}").encode("utf-8"),
                 f"{proyecto}_{ind_id}.tex", "text/plain"),
+            "Markdown": (tables.a_markdown_doc(est),
+                         f"{proyecto}_{ind_id}.md", "text/markdown"),
         }
 
     st.markdown("##### Descargar tabla")

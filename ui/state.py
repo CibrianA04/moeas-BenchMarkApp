@@ -61,15 +61,12 @@ def esta_completo(i: int) -> bool:
 
 
 def puede_ir_a(i: int) -> bool:
-    """
-    MAQUETA: todo DESBLOQUEADO para poder mostrar libremente cada paso del flujo.
-    (A futuro: gating real -> entrar al paso i solo si los anteriores estan
-    completos: `return all(st.session_state[K_COMP][:i])`.)
-    """
-    return True
+    """GATING real: se puede entrar al paso i solo si TODOS los anteriores
+    estan completos (el paso 0 siempre esta disponible)."""
+    return all(st.session_state[K_COMP][:i])
 
 
 def ir_a(i: int) -> None:
-    """Cambia al paso i (en la maqueta no hay restriccion de navegacion)."""
+    """Cambia al paso i solo si esta desbloqueado (respeta el gating)."""
     if puede_ir_a(i):
         st.session_state[K_PASO] = i

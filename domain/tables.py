@@ -201,3 +201,53 @@ def a_csv_doc(estructurada: pd.DataFrame) -> bytes:
                                       "media", "desv", "rank", "sig"])
     df["rank"] = df["rank"].astype("Int64")
     return df.to_csv(index=False).encode("utf-8")
+
+
+def a_markdown_doc(estructurada: pd.DataFrame) -> bytes:
+    """
+    Markdown (bytes utf-8) para descargar, construido a mano (sin depender de
+    tabulate/to_markdown): mismas columnas que la vista de la UI (MOP, m, N +
+    una por MOEA con "media (desv)", o N/A si falta el dato). La mejor media
+    de cada fila va en **negritas**: es el rank 1 de la tabla estructurada,
+    que ya respeta el sentido max/min del indicador (mismo criterio que el
+    sombreado del render LaTeX).
+    """
+    moeas = _moeas_de(estructurada)
+    display, mask = tabla_display(estructurada, moeas)
+    cols = list(display.columns)
+    L = ["| " + " | ".join(cols) + " |",
+         "| " + " | ".join("---" for _ in cols) + " |"]
+    for i in range(len(display)):
+        celdas = [f"**{display.iloc[i][c]}**" if mask.iloc[i][c]
+                  else str(display.iloc[i][c]) for c in cols]
+        L.append("| " + " | ".join(celdas) + " |")
+    return "\n".join(L).encode("utf-8")
+
+
+def tabla_display(est: pd.DataFrame,
+                  moeas: list[str]) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    PURA (sin streamlit; testeable): aplana la tabla estructurada de
+    `tabla_estructurada` a un DataFrame de presentacion + su mascara.
+
+    - display: columnas MOP, m, N + una por MOEA con "media (desv)" en notacion
+      cientifica, o "N/A" si falta el dato de esa (MOP, m, N, MOEA).
+    - mask: mismas columnas; True donde ese MOEA es rank 1 de la fila (para
+      resaltarlo). Las columnas MOP/m/N nunca se resaltan.
+    """
+    filas, marcas = [], []
+    for _, fila in est.iterrows():
+        d = {"MOP": fila[("MOP", "")], "m": fila[("m", "")], "N": fila[("N", "")]}
+        mk = {"MOP": False, "m": False, "N": False}
+        for mo in moeas:
+            rank = fila[(mo, "rank")]
+            if pd.isna(rank):
+                d[mo], mk[mo] = "N/A", False
+            else:
+                d[mo] = f"{fila[(mo, 'media')]:.3e} ({fila[(mo, 'desv')]:.3e})"
+                mk[mo] = int(rank) == 1
+        filas.append(d)
+        marcas.append(mk)
+    cols = ["MOP", "m", "N", *moeas]
+    return (pd.DataFrame(filas, columns=cols),
+            pd.DataFrame(marcas, columns=cols))

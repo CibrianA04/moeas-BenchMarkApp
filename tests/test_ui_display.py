@@ -1,15 +1,14 @@
 # -*- coding: utf-8 -*-
 """
-Test de la funcion PURA de presentacion `ui.steps.paso_resultados.tabla_display`
+Test de la funcion PURA de presentacion `domain.tables.tabla_display`
 (aplana la tabla estructurada a "media (desv)"/"N/A" + mascara del mejor).
-No arranca streamlit: solo importa el modulo y ejerce la funcion pura.
+HEADLESS: no importa streamlit ni nada de `ui/`.
 """
 from __future__ import annotations
 
 import pandas as pd
 
 from domain import tables
-from ui.steps import paso_resultados
 
 
 def _res(moea, valores, mop="DTLZ2", m=2, N=100) -> dict:
@@ -25,7 +24,7 @@ def test_tabla_display_formato_mascara_y_na():
         _res("A", [0.50, 0.51, 0.52], mop="WFG3", m=3),
     ]
     est = tables.tabla_estructurada(res, "IGD", moeas=["A", "B"])
-    display, mask = paso_resultados.tabla_display(est, ["A", "B"])
+    display, mask = tables.tabla_display(est, ["A", "B"])
 
     assert list(display.columns) == ["MOP", "m", "N", "A", "B"]
     assert list(mask.columns) == ["MOP", "m", "N", "A", "B"]
@@ -52,7 +51,7 @@ def test_tabla_display_formato_mascara_y_na():
 def test_tabla_display_vacia():
     # Sin filas -> DataFrames vacios pero con las columnas esperadas.
     est = tables.tabla_estructurada([], "IGD", moeas=["A", "B"])
-    display, mask = paso_resultados.tabla_display(est, ["A", "B"])
+    display, mask = tables.tabla_display(est, ["A", "B"])
     assert list(display.columns) == ["MOP", "m", "N", "A", "B"]
     assert len(display) == 0 and len(mask) == 0
     assert isinstance(display, pd.DataFrame)
