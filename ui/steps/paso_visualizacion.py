@@ -45,16 +45,17 @@ def _pfa_corrida_mediana(pfas, omitidos, mop, m, n_pob, moea, indicador, indice)
 
 
 def _mostrar_figura(pfa, titulo: str) -> None:
-    """Dibuja el frente (2D/3D) y cablea las descargas reales de la figura."""
+    """Dibuja el frente (2D/3D directo; m>3 con método a elegir) y cablea las
+    descargas reales de la figura."""
     st.markdown("#### Figura")
-    if pfa.m not in (2, 3):
-        st.info("Visualización pendiente para m>3")
-        st.markdown("##### Descargar figura")
-        components.descargas("figura", FORMATOS)      # sin datos: deshabilitado
-        return
-
-    # El DOMINIO construye la figura (port de Plot2D/Plot3D del doc, headless).
-    fig = figures.figura_frente(pfa.puntos, pfa.m, titulo=titulo)
+    # El DOMINIO construye la figura (ports headless del estilo del doc).
+    if pfa.m in (2, 3):
+        fig = figures.figura_frente(pfa.puntos, pfa.m, titulo=titulo)
+    else:
+        metodo = st.selectbox("Método de visualización (m>3)",
+                              figures.METODOS_M4, key="viz_metodo")
+        fig = figures.figura_frente(pfa.puntos, pfa.m, metodo=metodo,
+                                    titulo=titulo)
     st.pyplot(fig)
 
     base = (pfa.archivo.rsplit(".", 1)[0] if pfa.archivo else
