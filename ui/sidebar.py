@@ -21,7 +21,7 @@ def render() -> None:
         st.text_input("Nombre del proyecto", key=state.K_PROY)
         c1, c2, c3 = st.columns(3)
         if c1.button("Nuevo", width="stretch"):
-            # FUTURO: limpiar el estado y empezar un proyecto vacio.
+            # PENDIENTE (persistencia SQLite): limpiar el estado y empezar vacio.
             st.toast("FUTURO: nuevo proyecto.")
         if c2.button("Cargar", width="stretch"):
             st.toast(services.cargar_proyecto())   # devuelve mensaje FUTURO
@@ -72,4 +72,4 @@ def render() -> None:
         st.caption("Cada paso se desbloquea al completar el anterior.")
 
         st.divider()
-        st.caption("v0.2 · maqueta en capas (sin logica)")
+        st.caption("v0.2 · evaluacion y visualizacion de PFAs")

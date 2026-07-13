@@ -14,9 +14,8 @@ from ui import components, sidebar, state
 from ui.steps import (paso_datos, paso_indicadores, paso_resultados,
                       paso_visualizacion)
 
-#llamada de Streamlit.
 st.set_page_config(
-    page_title="BenchMark-MOEAs (maqueta)",
+    page_title="BenchMark-MOEAs",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -35,14 +34,14 @@ def main() -> None:
     sidebar.render()             # configuracion global + navegacion con gating
 
     st.title("Benchmarking de MOEAs ")
-    st.caption("Demo del FLUJO de la aplicacion.")
+    st.caption("Flujo: Datos -> Indicadores -> Resultados -> Visualizacion.")
 
     # Flujo siempre visible: en que paso estamos y cuales se completaron.
     components.stepper()
 
     st.divider()
 
-    # Despacha el paso actual (en la maqueta puedes navegar libremente).
+    # Despacha el paso actual (indice acotado por si el estado trae un valor raro).
     i = max(0, min(state.paso_actual(), len(RENDER_PASOS) - 1))
     RENDER_PASOS[i]()
 

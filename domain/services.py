@@ -83,15 +83,17 @@ def cobertura_frentes_referencia(pares, dir_ref=None, mapeo: dict | None = None,
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  Persistencia del proyecto (aun stub; lo usa la barra lateral)
+#  Persistencia del proyecto (PENDIENTE: SQLite; lo usa la barra lateral)
 # ─────────────────────────────────────────────────────────────────────────────
 def guardar_proyecto(proy: Proyecto) -> str:
-    """MAQUETA: no persiste todavia. FUTURO: persistence.guardar(proy) en SQLite."""
+    """PENDIENTE: persistencia SQLite (persistence.guardar). Devuelve el aviso
+    que muestra la UI; aun no escribe nada."""
     _ = proy
     return "FUTURO: guardar el proyecto en SQLite (aun no implementado)."
 
 
 def cargar_proyecto(ruta: str = "proyecto.sqlite") -> str:
-    """MAQUETA: no carga todavia. FUTURO: persistence.cargar(ruta)."""
+    """PENDIENTE: carga desde SQLite (persistence.cargar). Devuelve el aviso
+    que muestra la UI; aun no lee nada."""
     _ = ruta
     return "FUTURO: cargar el proyecto desde SQLite (aun no implementado)."

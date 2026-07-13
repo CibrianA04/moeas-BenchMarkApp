@@ -137,8 +137,7 @@ def render() -> None:
         with st.expander(meta.nombre, expanded=False):
             st.caption(meta.descripcion)
             if ind_id == "HV":
-                st.caption("FUTURO: calculo via pymoo (interfaz lista para "
-                           "binario en C).")
+                st.caption("Calculado via pymoo.")
                 modo = st.radio("Punto de referencia",
                                 ["Automatico (nadir)", "1.1 x nadir", "Manual"],
                                 horizontal=True, key=f"hv_{ind_id}")

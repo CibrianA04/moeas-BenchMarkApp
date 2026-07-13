@@ -118,7 +118,7 @@ def render() -> None:
         )
         st.caption(
             f"Estandar de literatura: {CORRIDAS_ESTANDAR} corridas por par "
-            f"(MOEA, MOP). FUTURO: aviso si n < {CORRIDAS_MINIMAS}."
+            f"(MOEA, MOP); minimo recomendado: {CORRIDAS_MINIMAS}."
         )
 
     with col_der:

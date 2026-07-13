@@ -49,8 +49,8 @@ def estimar_ideal_nadir(conjunto: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     Estima (ideal, nadir) por objetivo a partir de un conjunto de puntos:
     ideal = minimo por columna, nadir = maximo por columna (minimizacion).
 
-    FUTURO: manejo de DRS (soluciones resistentes a la dominancia) para que el
-    nadir no se contamine; por ahora es el maximo crudo del conjunto.
+    Limitacion conocida: sin manejo de DRS (soluciones resistentes a la
+    dominancia), el nadir es el maximo crudo y puede venir contaminado.
     """
     C = np.asarray(conjunto, dtype=float)
     if C.shape[0] == 0:

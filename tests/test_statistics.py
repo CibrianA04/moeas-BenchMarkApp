@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Tests de domain/statistics.py: resumen (media/desv), corrida mediana y el PREVIEW
-de significancia (Mann-Whitney U de una cola hacia el ganador segun el sentido).
+Tests de domain/statistics.py: resumen (media/desv), corrida mediana y
+significancia (Mann-Whitney U de una cola hacia el ganador segun el sentido).
 """
 from __future__ import annotations
 
@@ -49,7 +49,7 @@ def test_corrida_mediana_dataframe():
     assert fila["valor"] == pytest.approx(2.0)
 
 
-# ── significancia (PREVIEW) ──────────────────────────────────────────────────
+# ── significancia ────────────────────────────────────────────────────────────
 _A = [1.0, 2.0, 3.0, 4.0, 5.0]           # media 3
 _B = [10.0, 11.0, 12.0, 13.0, 14.0]      # media 12 (grupos bien separados)
 

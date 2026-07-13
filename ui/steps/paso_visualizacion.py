@@ -4,7 +4,7 @@ Paso 4 · VISUALIZACION: graficar el frente de la corrida MEDIANA (lo que pide e
 doc: no se grafica una corrida cualquiera, sino la asociada a la mediana del
 indicador; HV por defecto). Si aun no hay resultados del Paso 2, se puede elegir
 la corrida a mano. La figura la construye domain/figures (headless, estilo del
-doc); aqui solo se muestra y se ofrece descargar (PNG/SVG/EPS reales).
+doc); aqui solo se muestra y se descarga (PNG/SVG/EPS, y .tex si hay LaTeX).
 """
 from __future__ import annotations
 

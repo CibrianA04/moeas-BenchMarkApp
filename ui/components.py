@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-Componentes de presentacion reutilizables (maqueta).
+Componentes de presentacion reutilizables.
 
   - stepper():   muestra los 4 pasos, resaltando el actual y los completados.
-  - placeholder(): un hueco claro "aqui ira X" (SIN datos falsos).
+  - placeholder(): hueco claro "aqui ira X" para cuando AUN no hay datos.
   - descargas():  selector de formato + boton de descarga (PNG/CSV por defecto).
 """
 from __future__ import annotations
@@ -26,8 +26,8 @@ def stepper() -> None:
 
 def placeholder(titulo: str, descripcion: str = "") -> None:
     """
-    Hueco de maqueta: indica QUE ira aqui (sin inventar datos). Sustituye a
-    tablas/figuras mientras no hay datos reales cargados.
+    Hueco visible mientras NO hay datos cargados: indica QUE ira aqui,
+    sin inventar numeros.
     """
     with st.container(border=True):
         st.markdown(f"**Aqui ira:** {titulo}")

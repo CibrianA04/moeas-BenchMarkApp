@@ -203,25 +203,34 @@ def a_csv_doc(estructurada: pd.DataFrame) -> bytes:
     return df.to_csv(index=False).encode("utf-8")
 
 
+def df_a_markdown(df: pd.DataFrame) -> str:
+    """
+    Tabla pipe de Markdown de un DataFrame PLANO (sin indice), construida a
+    mano: el to_markdown de pandas requiere el paquete `tabulate` y esa
+    dependencia no se quiere en el proyecto.
+    """
+    cols = [str(c) for c in df.columns]
+    L = ["| " + " | ".join(cols) + " |",
+         "| " + " | ".join("---" for _ in cols) + " |"]
+    for _, fila in df.iterrows():
+        L.append("| " + " | ".join(str(v) for v in fila) + " |")
+    return "\n".join(L)
+
+
 def a_markdown_doc(estructurada: pd.DataFrame) -> bytes:
     """
-    Markdown (bytes utf-8) para descargar, construido a mano (sin depender de
-    tabulate/to_markdown): mismas columnas que la vista de la UI (MOP, m, N +
-    una por MOEA con "media (desv)", o N/A si falta el dato). La mejor media
-    de cada fila va en **negritas**: es el rank 1 de la tabla estructurada,
-    que ya respeta el sentido max/min del indicador (mismo criterio que el
-    sombreado del render LaTeX).
+    Markdown (bytes utf-8) de la tabla de desempeno: mismas columnas que la
+    vista de la UI (MOP, m, N + una por MOEA con "media (desv)", o N/A si
+    falta el dato). La mejor media de cada fila va en **negritas**: es el
+    rank 1 de la tabla estructurada, que ya respeta el sentido max/min del
+    indicador (mismo criterio que el sombreado del render LaTeX).
     """
     moeas = _moeas_de(estructurada)
     display, mask = tabla_display(estructurada, moeas)
-    cols = list(display.columns)
-    L = ["| " + " | ".join(cols) + " |",
-         "| " + " | ".join("---" for _ in cols) + " |"]
-    for i in range(len(display)):
-        celdas = [f"**{display.iloc[i][c]}**" if mask.iloc[i][c]
-                  else str(display.iloc[i][c]) for c in cols]
-        L.append("| " + " | ".join(celdas) + " |")
-    return "\n".join(L).encode("utf-8")
+    for mo in moeas:
+        display[mo] = [f"**{valor}**" if marcado else valor
+                       for valor, marcado in zip(display[mo], mask[mo])]
+    return df_a_markdown(display).encode("utf-8")
 
 
 def tabla_display(est: pd.DataFrame,

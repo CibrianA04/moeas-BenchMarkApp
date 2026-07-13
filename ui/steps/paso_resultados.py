@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Paso 3 · RESULTADOS: tabla por indicador (mejor media resaltada), pruebas
-estadisticas por escenario y exportacion (CSV / LaTeX).
+estadisticas por escenario, CD plot y exportacion (CSV / LaTeX / Markdown).
 
 Consume la salida del motor (`state.K_RES`/`state.K_OMIT`, producida en el Paso 2
 por `domain.evaluacion.evaluar`) y la presenta con `domain.tables` /
@@ -64,7 +64,7 @@ def _mostrar_significancia(resultados: list[dict], ind_id: str,
     datos = {
         "CSV": (vista.to_csv(index=False).encode("utf-8"),
                 f"{base}.csv", "text/csv"),
-        "Markdown": (vista.to_markdown(index=False).encode("utf-8"),
+        "Markdown": (tables.df_a_markdown(vista).encode("utf-8"),
                      f"{base}.md", "text/markdown"),
         "LaTeX (.tex)": (vista.to_latex(index=False).encode("utf-8"),
                          f"{base}.tex", "text/plain"),

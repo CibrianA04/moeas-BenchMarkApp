@@ -59,14 +59,6 @@ def recomendar_prueba(escenario: str) -> str:
     return PRUEBA_POR_ESCENARIO.get(escenario, "Wilcoxon (rangos con signo)")
 
 
-def comparar(valores_a, valores_b, escenario: str, alpha: float = 0.05) -> str:
-    """
-    STUB: compara dos MOEAs y devuelve un simbolo '+', '-' o '='.
-    FUTURO: usar scipy.stats (wilcoxon / mannwhitneyu) segun escenario.
-    """
-    raise NotImplementedError("Prueba estadistica pendiente (scipy.stats).")
-
-
 # ─────────────────────────────────────────────────────────────────────────────
 #  Consumo de la salida de evaluacion.evaluar. Cada dict de entrada ya viene por
 #  (MOP, m, N, MOEA, indicador) con `valores` = un valor por corrida.
@@ -139,14 +131,14 @@ _COLS_SIGNIF = ["mop", "m", "N", "indicador", "sentido", "ganador",
 
 def significancia(resultados, alpha: float = 0.05) -> pd.DataFrame:
     """
-    PREVIEW de significancia por (MOP, m, N, indicador). NO es autoritativo: la
-    tabla oficial (con su Wilcoxon y ranking) la produce el script R del doctor.
-    Se replica su MISMA config para que el preview sea coherente:
+    Significancia por (MOP, m, N, indicador), con la MISMA config del script R
+    del doctor (su tabla sigue siendo el oraculo: esta debe coincidir con ella):
 
     - Ganador = MOEA con la MEJOR media segun CATALOGO[indicador].sentido
       ('max' -> media mayor; 'min' -> media menor).
-    - Mann-Whitney U (muestras INDEPENDIENTES), UNA cola hacia el ganador
-      (alternative 'greater' si 'max', 'less' si 'min'), SIN correccion multiple.
+    - Mann-Whitney U (las corridas son muestras INDEPENDIENTES, no pareadas),
+      UNA cola hacia el ganador (alternative 'greater' si 'max', 'less' si
+      'min'), SIN correccion multiple.
     - Ganador contra CADA rival; marca `significativo` si p <= alpha (0.05).
 
     Grupos con < 2 MOEAs se omiten (no hay con quien comparar).

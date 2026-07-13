@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Indicadores de calidad: catalogo + interfaz de calculo (STUB).
+Indicadores de calidad: catalogo + calculo. HV, IGD, IGD+, Eps+ y Dp se
+calculan (pymoo / numpy); R2, Riesz y SPD siguen pendientes de los parametros
+del doctor y lanzan NotImplementedError.
 
 Pareto-compliance es un atributo de PRIMERA CLASE: solo los indicadores
 compliant (estricta/debil) permiten conclusiones fuertes. HV e IGD+ lo son;
@@ -26,8 +28,8 @@ class MetaIndicador:
     descripcion: str = ""
 
 
-# Catalogo. Punto de EXTENSION: agregar un indicador = agregar una entrada aqui
-# (y, en la version real, su rama en calcular()).
+# Catalogo. Punto de EXTENSION: agregar un indicador = una entrada aqui + su
+# rama en calcular().
 CATALOGO: dict[str, MetaIndicador] = {
     "HV":    MetaIndicador("HV", "HV (Hypervolume)", "max", False, "strict", "principal",
                            "Volumen dominado respecto a un punto de referencia."),
@@ -106,7 +108,7 @@ def calcular(ind_id: str, puntos: np.ndarray,
         # de esta version de pymoo promedian distancias (equivale a p=1) y NO exponen
         # el exponente p; por eso hoy `p` NO se propaga al computo (queda como TODO
         # hasta fijar la convencion exacta de Delta_p con el doc).
-        p = params.get("p", 2)  # noqa: F841  (placeholder pendiente; ver docstring)
+        p = params.get("p", 2)  # noqa: F841  (inerte hasta fijar la convencion; ver arriba)
         from pymoo.indicators.gd import GD    # import perezoso
         from pymoo.indicators.igd import IGD  # import perezoso
         R = np.asarray(ref, float)

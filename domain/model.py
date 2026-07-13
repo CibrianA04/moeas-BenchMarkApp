@@ -42,8 +42,8 @@ class PFA:
     moea: str
     mop: str
     m: int
-    # n: rol semantico pendiente de confirmar con el doc: tamano de poblacion o
-    # cardinalidad del frente? (coincide con tamanos Das-Dennis en los 302 .pof).
+    # n = tamano de POBLACION (confirmado por el doc); clave del escenario
+    # (MOP, m, N). Su relacion con el `card` del script R sigue pendiente.
     n: int
     corrida: int
     puntos: np.ndarray            # forma (N, m)
@@ -57,7 +57,7 @@ class MapeoArchivo:
     moea: str
     mop: str
     m: int
-    # n: rol semantico pendiente de confirmar con el doc (poblacion vs cardinalidad).
+    # n = tamano de poblacion (confirmado por el doc).
     n: int
     corrida: int
 
