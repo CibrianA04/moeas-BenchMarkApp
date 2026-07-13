@@ -315,6 +315,77 @@ def figura_frente(puntos: np.ndarray, m: int | None = None,
     return construir(P, **kw)
 
 
+def figura_critical_differences(cd, *, titulo: str | None = None,
+                                figsize: tuple[float, float] = (8, 4.5),
+                                escala_fuente: float = 1.0) -> "plt.Figure":
+    """
+    Diagrama de Critical Differences (Demsar 2006) de UN indicador, a partir
+    del CriticalDifference de statistics.critical_differences: eje horizontal
+    de rangos (mejor rango a la IZQUIERDA), cada MOEA colgado de su rango
+    promedio, regla con la magnitud de la CD y barras gruesas uniendo los
+    grupos que NO difieren significativamente. Todo se dibuja en coordenadas
+    de datos con el eje apagado (el diagrama clasico no tiene marco).
+    """
+    rangos = dict(cd.rank_promedio)          # ya viene ordenado mejor -> peor
+    moeas = list(rangos)
+    lo = min(1.0, *rangos.values())
+    hi = max(float(cd.k), *rangos.values())
+
+    fig, ax = plt.subplots(figsize=figsize)
+    ax.set_axis_off()
+
+    # Eje principal de rangos, con ticks enteros (1 = mejor, a la izquierda).
+    ax.plot([lo, hi], [0, 0], color="black", lw=1.2, zorder=2)
+    for t in range(int(np.ceil(lo)), int(np.floor(hi)) + 1):
+        ax.plot([t, t], [0, 0.07], color="black", lw=1.0, zorder=2)
+        ax.text(t, 0.12, str(t), ha="center", va="bottom",
+                fontsize=10 * escala_fuente)
+
+    # Regla con la magnitud de la CD (arriba a la izquierda), con topes.
+    y_cd = 0.42
+    ax.plot([lo, lo + cd.cd], [y_cd, y_cd], color="darkred", lw=2.0)
+    for x in (lo, lo + cd.cd):
+        ax.plot([x, x], [y_cd - 0.04, y_cd + 0.04], color="darkred", lw=2.0)
+    ax.text(lo + cd.cd / 2, y_cd + 0.07, f"CD = {cd.cd:.3f}",
+            ha="center", va="bottom", fontsize=10 * escala_fuente)
+
+    # Barras de los grupos sin diferencia significativa (escalonadas).
+    y_grupo = -0.12
+    for grupo in cd.grupos:
+        xs = [rangos[mo] for mo in grupo]
+        ax.plot([min(xs), max(xs)], [y_grupo, y_grupo], color="darkblue",
+                lw=3.5 * escala_fuente, solid_capstyle="round", zorder=3)
+        y_grupo -= 0.10
+
+    # Etiquetas colgadas del eje: mejor mitad a la IZQUIERDA (rank 1 hasta
+    # arriba) y peor mitad a la DERECHA (el peor hasta arriba), como el clasico.
+    y0 = y_grupo - 0.10
+    paso = 0.16
+    mitad = (len(moeas) + 1) // 2
+    margen = 0.03 * (hi - lo)
+    for i, mo in enumerate(moeas[:mitad]):
+        y = y0 - i * paso
+        ax.plot([rangos[mo], rangos[mo]], [0, y], color="black", lw=0.8, zorder=1)
+        ax.plot([rangos[mo], lo - margen], [y, y], color="black", lw=0.8, zorder=1)
+        ax.text(lo - 2 * margen, y, f"{mo} ({rangos[mo]:.2f})", ha="right",
+                va="center", fontsize=10 * escala_fuente)
+    for i, mo in enumerate(reversed(moeas[mitad:])):
+        y = y0 - i * paso
+        ax.plot([rangos[mo], rangos[mo]], [0, y], color="black", lw=0.8, zorder=1)
+        ax.plot([rangos[mo], hi + margen], [y, y], color="black", lw=0.8, zorder=1)
+        ax.text(hi + 2 * margen, y, f"({rangos[mo]:.2f}) {mo}", ha="left",
+                va="center", fontsize=10 * escala_fuente)
+
+    # Margenes: espacio lateral para las etiquetas y vertical para regla/colgados.
+    holgura = 0.35 * (hi - lo) + 0.5
+    ax.set_xlim(lo - holgura, hi + holgura)
+    filas = max(mitad, len(moeas) - mitad)
+    ax.set_ylim(y0 - (filas - 1) * paso - 0.15, y_cd + 0.30)
+    _titular(fig, titulo, escala_fuente)
+    fig.tight_layout()
+    return fig
+
+
 # Motores LaTeX que entiende el backend PGF, en orden de preferencia.
 _MOTORES_LATEX = ("xelatex", "lualatex", "pdflatex")
 

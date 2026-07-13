@@ -13,12 +13,20 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
-from domain import indicators, statistics, tables
+from domain import figures, indicators, statistics, tables
 from domain.tables import tabla_display
 from .. import components, state
 
 # Estilo del resaltado de la mejor media (rank 1) de cada fila.
 _RESALTE = "background-color: rgba(33, 150, 83, 0.35); font-weight: 700;"
+
+# Formatos de descarga del CD plot (mismo mecanismo que las figuras del Paso 4).
+_EXT_MIME = {
+    "PNG": ("png", "image/png"),
+    "SVG": ("svg", "image/svg+xml"),
+    "EPS": ("eps", "application/postscript"),
+    "TikZ (.tex)": ("tex", "application/x-tex"),
+}
 
 
 def _mostrar_tabla(est: pd.DataFrame, moeas: list[str]) -> None:
@@ -62,6 +70,36 @@ def _mostrar_significancia(resultados: list[dict], ind_id: str,
                          f"{base}.tex", "text/plain"),
     }
     components.descargas("significancia", list(datos), datos_por_formato=datos)
+
+
+def _mostrar_cd_plot(resultados: list[dict], ind_id: str, nombre: str,
+                     filtro_n: int | None) -> None:
+    """CD plot (Demsar): rangos promedio y grupos sin diferencia significativa,
+    coherente con el indicador y el filtro de N en pantalla."""
+    st.markdown("##### Critical Differences plot")
+    sub = [r for r in resultados if r["indicador"] == ind_id]
+    if filtro_n is not None:
+        sub = [r for r in sub if r["N"] == filtro_n]
+    cd = statistics.critical_differences(sub).get(ind_id)
+    if cd is None:
+        st.info("Sin CD plot: se necesitan >= 2 MOEAs evaluados en este "
+                "indicador (con el filtro actual).")
+        return
+    st.caption(f"Nemenyi con alpha=0.05 sobre {cd.N} escenario(s) y {cd.k} "
+               "MOEAs; una barra une a los que NO difieren significativamente.")
+
+    # El DOMINIO construye la figura; aqui solo se muestra y se exporta.
+    fig = figures.figura_critical_differences(cd, titulo=f"CD plot · {nombre}")
+    st.pyplot(fig)
+
+    proyecto = st.session_state.get(state.K_PROY, "experimento")
+    datos = {}
+    for etiqueta, (ext, mime) in _EXT_MIME.items():
+        contenido = figures.guardar_figura(fig, etiqueta)
+        if contenido is not None:
+            datos[etiqueta] = (contenido, f"{proyecto}_{ind_id}_cd.{ext}", mime)
+    figures.cerrar(fig)                               # tras exportar los bytes
+    components.descargas("cd_plot", list(_EXT_MIME), datos_por_formato=datos)
 
 
 def _mostrar_omitidos() -> None:
@@ -159,8 +197,6 @@ def render() -> None:
 
     _mostrar_omitidos()
 
-    st.markdown("##### Critical Differences plot (futuro)")
-    st.caption("Ranking de MOEAs y grupos sin diferencia significativa.")
-    components.descargas("cd_plot", ["PNG", "SVG", "EPS", "TikZ (.tex)"])
+    _mostrar_cd_plot(resultados, ind_id, nombres[ind_id], filtro_n)
 
     _botones_navegacion()
