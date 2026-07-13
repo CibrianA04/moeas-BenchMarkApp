@@ -200,3 +200,4 @@ def render() -> None:
     _mostrar_cd_plot(resultados, ind_id, nombres[ind_id], filtro_n)
 
     _botones_navegacion()
+

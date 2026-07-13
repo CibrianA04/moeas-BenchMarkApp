@@ -199,3 +199,4 @@ def test_csv_largo_filas_y_columnas():
     assert gana["rank"] == 1 and str(gana["sig"]) == "False"
     marcado = df[(df["MOP"] == "DTLZ2") & (df["N"] == 100) & (df["MOEA"] == "Alg2")].iloc[0]
     assert marcado["rank"] == 2 and str(marcado["sig"]) == "True"
+    

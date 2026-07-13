@@ -67,10 +67,9 @@ def calcular(ind_id: str, puntos: np.ndarray,
     - Valida `requiere_ref` contra el CATALOGO: si el indicador necesita frente de
       referencia y `ref is None`, lanza ValueError.
     - HV: via pymoo. Usa `punto_ref` (punto de referencia/nadir); si es None, se
-      toma el nadir del propio conjunto (la POLITICA del punto de referencia
-      —nadir, 1.1*nadir, [2,..]— esta PENDIENTE de confirmar con el doc).
+      toma el nadir del propio conjunto 
     - IGD, IGD+ y Dp: via pymoo (import perezoso por rama). Eps+ (epsilon aditivo)
-      se calcula con numpy (esta version de pymoo no trae el modulo de epsilon).
+      se calcula con numpy (version de pymoo no trae el modulo de epsilon).
       Los cuatro usan el frente de referencia `ref` ya validado arriba.
     - Dp acepta el parametro `p` (default 2) como CONVENCION PENDIENTE de confirmar
       con el doc; ver `calcular`/rama "Dp" para el detalle.

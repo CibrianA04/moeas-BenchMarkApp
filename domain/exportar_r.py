@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Exportador al formato/ruta EXACTOS que lee el script del doctor
+Exportador al formato/ruta EXACTOS que lee el script
 CreateIndicator/createIndicatorTable.R. La app NO calcula medias/Wilcoxon/tabla
-(eso lo hace R, fuente unica de verdad; ver CLAUDE.md §5): aqui SOLO se escriben
+aqui SOLO se escriben
 los valores de indicador POR CORRIDA en el arbol que ese script consume.
 
 Ruta que espera el R (de su propio codigo, linea 64):
