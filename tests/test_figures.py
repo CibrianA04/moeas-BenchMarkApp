@@ -134,6 +134,21 @@ def test_ninguna_funcion_escribe_a_disco(tmp_path, monkeypatch):
     assert list(tmp_path.iterdir()) == []
 
 
+def test_guardar_figura_tex_pgf_segun_haya_latex():
+    # Con LaTeX instalado: bytes del fragmento PGF; sin LaTeX: None (boton
+    # deshabilitado). La rama se decide con hay_latex(), no se hardcodea.
+    fig = figures.figura_frente_2d(P2, titulo="t")
+    try:
+        tex = figures.guardar_figura(fig, "TikZ (.tex)")
+        if figures.hay_latex():
+            assert tex is not None and len(tex) > 0
+            assert tex.startswith(b"%% Creator: Matplotlib, PGF backend")
+        else:
+            assert tex is None
+    finally:
+        figures.cerrar(fig)
+
+
 def test_escala_fuente_sube_el_tamano_del_titulo():
     chico = figures.figura_frente_2d(P2, titulo="t", escala_fuente=1.0)
     grande = figures.figura_frente_2d(P2, titulo="t", escala_fuente=2.0)

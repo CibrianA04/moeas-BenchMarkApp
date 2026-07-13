@@ -13,12 +13,14 @@ import streamlit as st
 from domain import figures, statistics
 from .. import components, state
 
-# PNG por defecto (prioritario); TikZ queda deshabilitado (sin exportador aun).
+# PNG por defecto (prioritario); TikZ (.tex) via backend PGF: se deshabilita
+# solo si no hay LaTeX instalado (guardar_figura devuelve None).
 FORMATOS = ["PNG", "SVG", "EPS", "TikZ (.tex)"]
 _EXT_MIME = {
     "PNG": ("png", "image/png"),
     "SVG": ("svg", "image/svg+xml"),
     "EPS": ("eps", "application/postscript"),
+    "TikZ (.tex)": ("tex", "application/x-tex"),
 }
 
 
@@ -69,6 +71,8 @@ def _mostrar_figura(pfa, titulo: str) -> None:
 
     st.markdown("##### Descargar figura")
     components.descargas("figura", FORMATOS, datos_por_formato=datos)
+    if not figures.hay_latex():
+        st.caption("El .tex requiere una instalación de LaTeX (p. ej. MiKTeX).")
 
 
 def _render_mediana(pfas, resultados) -> None:

@@ -8,6 +8,7 @@ y NO se importa Streamlit. La capa de presentacion hace st.pyplot(fig).
 from __future__ import annotations
 
 import io
+import shutil
 
 import matplotlib
 matplotlib.use("Agg")            # backend sin pantalla; debe ir antes de pyplot
@@ -314,11 +315,50 @@ def figura_frente(puntos: np.ndarray, m: int | None = None,
     return construir(P, **kw)
 
 
+# Motores LaTeX que entiende el backend PGF, en orden de preferencia.
+_MOTORES_LATEX = ("xelatex", "lualatex", "pdflatex")
+
+
+def _motor_latex() -> str | None:
+    """Primer motor LaTeX disponible en el PATH (None si no hay ninguno)."""
+    for motor in _MOTORES_LATEX:
+        if shutil.which(motor):
+            return motor
+    return None
+
+
+def hay_latex() -> bool:
+    """True si hay un motor LaTeX instalado (requisito del export .tex/PGF)."""
+    return _motor_latex() is not None
+
+
+def _guardar_pgf(fig: "plt.Figure") -> bytes | None:
+    """
+    Fragmento PGF (\\input-able en LaTeX) de la figura, o None si no hay motor
+    LaTeX o el guardado falla (el backend PGF invoca LaTeX para medir textos).
+    NUNCA propaga la excepcion: la UI solo deshabilita el boton.
+    """
+    motor = _motor_latex()
+    if motor is None:
+        return None
+    try:
+        matplotlib.rcParams["pgf.texsystem"] = motor
+        matplotlib.rcParams["pgf.rcfonts"] = False
+        buf = io.BytesIO()
+        fig.savefig(buf, format="pgf")
+        return buf.getvalue()
+    except Exception:                        # noqa: BLE001 (nunca tronar la app)
+        return None
+
+
 def guardar_figura(fig: "plt.Figure", formato_ui: str) -> bytes | None:
     """
-    Exporta la figura a bytes. PNG/SVG/EPS son reales aqui.
-    TikZ/.tex devuelve None (FUTURO: requiere tikzplotlib o el backend pgf).
+    Exporta la figura a bytes. PNG/SVG/EPS son reales aqui; "TikZ (.tex)" es el
+    fragmento PGF del backend pgf de matplotlib (requiere LaTeX instalado).
+    Devuelve None si el formato no se puede exportar (boton deshabilitado).
     """
+    if formato_ui == "TikZ (.tex)":
+        return _guardar_pgf(fig)
     mapa = {"PNG (prioritario)": "png", "PNG": "png", "SVG": "svg", "EPS": "eps"}
     fmt = mapa.get(formato_ui)
     if fmt is None:
