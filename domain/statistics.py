@@ -15,6 +15,8 @@ LaTeX/CSV. Este modulo ofrece, consumiendo la salida de
                         salen las marcas '#' de la tabla.
   (d) ranking() / rango_promedio(): el ranking por media del R (su order()
                         estable) y el rango promedio (equivalente de _avgRank.txt).
+  (e) critical_differences(): datos del CD plot (Friedman + post-hoc de Nemenyi,
+                        Demsar 2006) REUTILIZANDO los rangos de (d).
 
 Eleccion de prueba SEGUN ESCENARIO (referencia):
     - pareado       -> Wilcoxon (rangos con signo)
@@ -22,6 +24,8 @@ Eleccion de prueba SEGUN ESCENARIO (referencia):
     - multi (3+)    -> Friedman + post-hoc (Nemenyi / Holm) + Critical Differences
 """
 from __future__ import annotations
+
+from dataclasses import dataclass, field
 
 import numpy as np
 import pandas as pd
@@ -61,11 +65,6 @@ def comparar(valores_a, valores_b, escenario: str, alpha: float = 0.05) -> str:
     FUTURO: usar scipy.stats (wilcoxon / mannwhitneyu) segun escenario.
     """
     raise NotImplementedError("Prueba estadistica pendiente (scipy.stats).")
-
-
-def critical_differences(rankings) -> "object":
-    """STUB: datos para el Critical Differences plot. FUTURO: Friedman + post-hoc."""
-    raise NotImplementedError("Critical Differences pendiente.")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -246,3 +245,70 @@ def rango_promedio(ranking: pd.DataFrame) -> pd.DataFrame:
                    .mean().reset_index()
                    .rename(columns={"rank": "rank_promedio"}))
     return prom[_COLS_RANGO_PROMEDIO]
+
+
+@dataclass(frozen=True)
+class CriticalDifference:
+    """Datos del Critical Differences plot (Demsar 2006) de UN indicador."""
+    indicador: str
+    k: int                                   # numero de MOEAs comparados
+    N: int                                   # escenarios (MOP, m, N) rankeados
+    cd: float                                # distancia critica de Nemenyi
+    rank_promedio: dict[str, float] = field(default_factory=dict)  # mejor->peor
+    grupos: list[tuple[str, ...]] = field(default_factory=list)    # sin dif. sig.
+
+
+def critical_differences(resultados,
+                         alpha: float = 0.05) -> dict[str, CriticalDifference]:
+    """
+    Datos para el CD plot estandar (Friedman + post-hoc de Nemenyi; Demsar
+    2006), POR indicador. REUTILIZA ranking()/rango_promedio() (la traduccion
+    del avgRank del script R del doc): aqui NO se recalculan rangos.
+
+    CD = q_alpha(k, inf)/sqrt(2) * sqrt(k(k+1)/(6N)), con q de la distribucion
+    del rango studentizado (scipy; sin tablas hardcodeadas). Dos MOEAs cuyos
+    rangos promedio difieren <= CD NO son significativamente distintos; los
+    `grupos` son los tramos MAXIMALES de MOEAs consecutivos (ordenados por
+    rango) cuyos extremos difieren <= CD (las barras de union del diagrama).
+    Indicadores con k < 2 o N < 1 se omiten del resultado.
+    """
+    from scipy.stats import studentized_range  # import perezoso (dependencia real)
+
+    rnk = ranking(resultados)
+    if rnk.empty:
+        return {}
+    prom = rango_promedio(rnk)
+
+    salida: dict[str, CriticalDifference] = {}
+    for indicador in rnk["indicador"].unique():
+        sub = rnk[rnk["indicador"] == indicador]
+        k = int(sub["moea"].nunique())
+        n_esc = int(len(sub[["mop", "m", "N"]].drop_duplicates()))
+        if k < 2 or n_esc < 1:
+            continue
+
+        q = float(studentized_range.ppf(1 - alpha, k, 1e9))
+        cd = float((q / np.sqrt(2.0)) * np.sqrt(k * (k + 1) / (6.0 * n_esc)))
+
+        p = prom[prom["indicador"] == indicador]
+        p = p.sort_values("rank_promedio", kind="stable")
+        rangos = {t.moea: float(t.rank_promedio)
+                  for t in p.itertuples(index=False)}
+
+        # Tramos maximales [i..j] con rango[j] - rango[i] <= CD (2+ MOEAs).
+        moeas = list(rangos)
+        vals = list(rangos.values())
+        grupos: list[tuple[str, ...]] = []
+        for i in range(len(moeas)):
+            j = i
+            while j + 1 < len(moeas) and vals[j + 1] - vals[i] <= cd:
+                j += 1
+            if j > i:
+                grupo = tuple(moeas[i:j + 1])
+                if not grupos or not set(grupo) <= set(grupos[-1]):
+                    grupos.append(grupo)
+
+        salida[indicador] = CriticalDifference(
+            indicador=indicador, k=k, N=n_esc, cd=cd,
+            rank_promedio=rangos, grupos=grupos)
+    return salida
