@@ -16,9 +16,8 @@ Esquema (una tabla por tipo de dato, un solo archivo .sqlite):
 
 Los ndarray se serializan con np.save (formato .npy: conserva forma y dtype)
 dentro de un BLOB. Este modulo trabaja con dicts PLANOS, sin dataclasses: la
-fachada domain/services.py convierte de/hacia las dataclasses de domain.model
-(la capa de datos no importa domain, salvo la excepcion de domain.model que
-aqui ni siquiera hace falta).
+conversion de/hacia domain.model vive en la fachada domain/services.py, asi
+que aqui no hace falta importar nada de domain.
 """
 from __future__ import annotations
 

@@ -133,10 +133,9 @@ def proyecto_a_bytes(estado: dict) -> bytes:
 
 def cargar_proyecto(fuente) -> dict:
     """
-    Carga un snapshot desde una ruta .sqlite o desde BYTES subidos (upload).
-    Devuelve el estado con los PFA reconstruidos como dataclasses y los
-    frentes como {(mop, m): puntos}. Propaga FileNotFoundError/ValueError
-    con mensajes claros (la UI los muestra sin tumbar la app).
+    Carga un snapshot desde una ruta .sqlite o desde BYTES subidos, con los PFA
+    como dataclasses y los frentes como {(mop, m): puntos}. Los errores salen
+    como FileNotFoundError/ValueError con mensaje claro (la UI los muestra).
     """
     if isinstance(fuente, (bytes, bytearray)):
         plano = persistence.desde_bytes(fuente)

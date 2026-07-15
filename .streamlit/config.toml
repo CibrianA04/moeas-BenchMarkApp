@@ -15,10 +15,10 @@ base = "dark"
 primaryColor = "#2E7D57"
 
 # Fondo principal (el area central de la app).
-backgroundColor = "#0E1117"
+backgroundColor = "#1b2a4a"
 
 # Fondo secundario (barra lateral, cajas, inputs).
-secondaryBackgroundColor = "#1C1F26"
+secondaryBackgroundColor = "#2f3d5f"
 
 # Color del texto.
 textColor = "#FAFAFA"

@@ -36,11 +36,9 @@ def _snapshot_estado() -> dict:
 
 
 def _aplicar_carga_pendiente() -> None:
-    """
-    Rehidrata session_state con un snapshot cargado. Corre al INICIO del render,
-    antes de instanciar widgets: claves como K_PROY pertenecen a un widget y
-    streamlit no permite pisarlas despues de crearlo en el mismo run.
-    """
+    """Rehidrata session_state con un snapshot cargado. Corre al INICIO del
+    render porque claves como K_PROY pertenecen a widgets y streamlit no
+    permite pisarlas despues de instanciarlos en el mismo run."""
     estado = st.session_state.pop(_K_PENDIENTE, None)
     if estado is None:
         return

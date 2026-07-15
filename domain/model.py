@@ -64,8 +64,10 @@ class MapeoArchivo:
 
 @dataclass
 class Proyecto:
-    """Contenedor de todo el experimento (se persiste en SQLite a futuro)."""
+    """Contenedor del experimento. NOTA: la persistencia actual (snapshot de
+    sesion en data/persistence, via services) NO usa esta dataclass: guarda
+    dicts desde session_state. Queda como modelo de una persistencia
+    estructurada futura; hoy nadie la construye."""
     nombre: str = "experimento_demo"
     config_csv: ConfigCSV = field(default_factory=ConfigCSV)
     mapeos: list[MapeoArchivo] = field(default_factory=list)
-    # FUTURO: frentes de referencia por MOP, indicadores elegidos, resultados...
