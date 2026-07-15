@@ -15,13 +15,15 @@ base = "dark"
 primaryColor = "#4d9fff"              # azul brillante, buen contraste
 
 # Fondo principal (el area central de la app).
-backgroundColor = "#142446"           # tu azul, un poco más profundo
+backgroundColor = "#213051"           # tu azul, un poco más profundo
 
 # Fondo secundario (barra lateral, cajas, inputs).
-secondaryBackgroundColor = "#0a1220"  # tu azul actual como secundario
+secondaryBackgroundColor = "#091e42"  # tu azul actual como secundario
 
 # Color del texto.
 textColor = "#e8eef7"
 
 # Tipografia: "sans serif", "serif" o "monospace".
 font = "sans serif"
+
+
