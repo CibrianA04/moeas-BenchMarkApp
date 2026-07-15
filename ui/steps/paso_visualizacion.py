@@ -51,13 +51,18 @@ def _mostrar_figura(pfa, titulo: str) -> None:
     descargas reales de la figura."""
     st.markdown("#### Figura")
     # El DOMINIO construye la figura (ports headless del estilo del doc).
-    if pfa.m in (2, 3):
-        fig = figures.figura_frente(pfa.puntos, pfa.m, titulo=titulo)
+    # Cada dimension ofrece sus vistas posibles; la primera (Dispersión) es el
+    # default. Keys distintas por caso para no confundir los selectbox.
+    if pfa.m == 2:
+        metodo = st.selectbox("Método de visualización",
+                              figures.METODOS_M2, key="viz_metodo_m2")
+    elif pfa.m == 3:
+        metodo = st.selectbox("Método de visualización",
+                              figures.METODOS_M3, key="viz_metodo_m3")
     else:
         metodo = st.selectbox("Método de visualización (m>3)",
                               figures.METODOS_M4, key="viz_metodo")
-        fig = figures.figura_frente(pfa.puntos, pfa.m, metodo=metodo,
-                                    titulo=titulo)
+    fig = figures.figura_frente(pfa.puntos, pfa.m, metodo=metodo, titulo=titulo)
     st.pyplot(fig)
 
     base = (pfa.archivo.rsplit(".", 1)[0] if pfa.archivo else

@@ -105,16 +105,40 @@ def test_dispatcher_metodo_para_m4_y_m5():
         figures.cerrar(fig)
 
 
-def test_dispatcher_m2_m3_siguen_igual_e_ignoran_metodo():
-    f2 = figures.figura_frente(P2, 2, metodo="Radar")
-    f3 = figures.figura_frente(P3, 3, metodo="Heatmap")
+def test_dispatcher_m2_m3_sin_metodo_siguen_dando_scatter():
+    # Sin `metodo`, m=2 y m=3 conservan el comportamiento historico: scatter.
+    f2 = figures.figura_frente(P2, 2)
+    f3 = figures.figura_frente(P3, 3)
     try:
-        assert f2.axes[0].name == "rectilinear"   # sigue siendo el scatter 2D
+        assert f2.axes[0].name == "rectilinear"   # scatter 2D
         assert len(f2.axes[0].collections) == 1
-        assert f3.axes[0].name == "3d"            # sigue siendo el scatter 3D
+        assert f3.axes[0].name == "3d"            # scatter 3D
     finally:
         figures.cerrar(f2)
         figures.cerrar(f3)
+
+
+def test_dispatcher_m2_acepta_vistas_alternativas():
+    # METODOS_M2 = Dispersión (scatter) + las vistas que aplican en 2D.
+    assert figures.METODOS_M2[0] == "Dispersión"
+    assert "Burbuja" not in figures.METODOS_M2    # pide 3 ejes: no aplica en 2D
+    for metodo in figures.METODOS_M2:
+        fig = figures.figura_frente(P2, 2, metodo=metodo, titulo="t")
+        try:
+            assert isinstance(fig, Figure)
+        finally:
+            figures.cerrar(fig)
+
+
+def test_dispatcher_m3_acepta_vistas_alternativas():
+    # METODOS_M3 = Dispersión (scatter) + las cuatro vistas de m>3.
+    assert figures.METODOS_M3[0] == "Dispersión"
+    for metodo in figures.METODOS_M3:
+        fig = figures.figura_frente(P3, 3, metodo=metodo, titulo="t")
+        try:
+            assert isinstance(fig, Figure)
+        finally:
+            figures.cerrar(fig)
 
 
 def test_dispatcher_m_mayor_que_3_metodo_desconocido():

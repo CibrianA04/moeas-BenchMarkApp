@@ -283,7 +283,7 @@ def figura_heatmap(puntos: np.ndarray, *, titulo: str | None = None,
     return fig
 
 
-# Metodos para m>3 (nombre visible en la UI -> constructor de la figura).
+# Metodos alternativos al scatter (nombre visible en la UI -> constructor).
 _FIGURAS_M4 = {
     "Coordenadas paralelas": figura_parallel,
     "Radar": figura_radar,
@@ -291,24 +291,34 @@ _FIGURAS_M4 = {
     "Heatmap": figura_heatmap,
 }
 METODOS_M4 = list(_FIGURAS_M4)
+# Vistas ofrecidas en 2D/3D (pedido del asesor): el scatter sigue siendo la
+# opcion por defecto (primera entrada). Burbuja NO aplica en m=2 (pide 3 ejes).
+METODOS_M3 = ["Dispersión", "Coordenadas paralelas", "Radar", "Burbuja", "Heatmap"]
+METODOS_M2 = ["Dispersión", "Coordenadas paralelas", "Radar", "Heatmap"]
 
 
 def figura_frente(puntos: np.ndarray, m: int | None = None,
-                  metodo: str = "Coordenadas paralelas", **kw) -> "plt.Figure":
+                  metodo: str | None = None, **kw) -> "plt.Figure":
     """
-    Dispatcher por dimension: m==2 -> figura_frente_2d, m==3 -> figura_frente_3d
-    (en ambos `metodo` se ignora), m>3 -> la figura de `metodo` (una de
-    METODOS_M4; default coordenadas paralelas). Si m es None se infiere de las
-    columnas. Reenvia **kw a la funcion concreta (titulo, etiquetas, figsize, ...).
+    Dispatcher por dimension. Sin `metodo`: m==2 -> figura_frente_2d, m==3 ->
+    figura_frente_3d, m>3 -> coordenadas paralelas. Con `metodo` ("Dispersión"
+    solo en m==2/3; el resto, una de _FIGURAS_M4) se construye esa vista; en
+    m==2 "Burbuja" no aplica (figura_bubble lanza ValueError). Si m es None se
+    infiere de las columnas. Reenvia **kw (titulo, etiquetas, figsize, ...).
     """
     P = np.asarray(puntos, dtype=float)
     if m is None:
         m = P.shape[1]
-    if m == 2:
-        return figura_frente_2d(P, **kw)
-    if m == 3:
-        return figura_frente_3d(P, **kw)
-    construir = _FIGURAS_M4.get(metodo)
+    if m in (2, 3):
+        if metodo is None or metodo == "Dispersión":
+            return figura_frente_2d(P, **kw) if m == 2 else figura_frente_3d(P, **kw)
+        construir = _FIGURAS_M4.get(metodo)
+        if construir is None:
+            opciones = METODOS_M2 if m == 2 else METODOS_M3
+            raise ValueError(f"Metodo desconocido para m={m}: '{metodo}'. "
+                             f"Opciones: {opciones}.")
+        return construir(P, **kw)
+    construir = _FIGURAS_M4.get(metodo or "Coordenadas paralelas")
     if construir is None:
         raise ValueError(f"Metodo desconocido para m>3: '{metodo}'. "
                          f"Opciones: {METODOS_M4}.")
