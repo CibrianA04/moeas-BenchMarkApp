@@ -12,8 +12,8 @@ import io
 
 import pandas as pd
 
-from data import csv_io
-from .model import PFA, ConfigCSV, Proyecto
+from data import csv_io, persistence
+from .model import PFA, ConfigCSV
 
 # Columnas del mapeo (una linea por archivo).
 COLS_MAPEO = ["archivo", "MOEA", "MOP", "m", "n", "corrida"]
@@ -83,17 +83,63 @@ def cobertura_frentes_referencia(pares, dir_ref=None, mapeo: dict | None = None,
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  Persistencia del proyecto (PENDIENTE: SQLite; lo usa la barra lateral)
+#  Persistencia del proyecto: snapshot SQLite de SESION (lo usa la barra
+#  lateral). La UI arma el `estado` desde session_state y NUNCA toca data/
+#  ni sqlite3 directo. El snapshot no guarda parametros de calculo (punto de
+#  referencia de HV, p de Dp...): eso es reproducibilidad, trabajo futuro.
+#
+#  Contrato del dict `estado` (todas las claves opcionales):
+#    nombre, paso, completado, separador, decimal, indicadores  -> meta
+#    pfas: list[PFA]                       (dataclasses de domain.model)
+#    frentes_ref: dict[(mop, m)] -> ndarray
+#    resultados / omitidos: list[dict]     (salida de evaluacion.evaluar)
 # ─────────────────────────────────────────────────────────────────────────────
-def guardar_proyecto(proy: Proyecto) -> str:
-    """PENDIENTE: persistencia SQLite (persistence.guardar). Devuelve el aviso
-    que muestra la UI; aun no escribe nada."""
-    _ = proy
-    return "FUTURO: guardar el proyecto en SQLite (aun no implementado)."
+def _snapshot_plano(estado: dict) -> dict:
+    """PFA -> dict y frentes dict -> filas: lo que espera data/persistence."""
+    plano = dict(estado)
+    plano["pfas"] = [
+        {"moea": p.moea, "mop": p.mop, "m": p.m, "n": p.n,
+         "corrida": p.corrida, "archivo": p.archivo, "puntos": p.puntos}
+        for p in (estado.get("pfas") or [])]
+    plano["frentes_ref"] = [
+        {"mop": mop, "m": m, "puntos": puntos}
+        for (mop, m), puntos in (estado.get("frentes_ref") or {}).items()]
+    return plano
 
 
-def cargar_proyecto(ruta: str = "proyecto.sqlite") -> str:
-    """PENDIENTE: carga desde SQLite (persistence.cargar). Devuelve el aviso
-    que muestra la UI; aun no lee nada."""
-    _ = ruta
-    return "FUTURO: cargar el proyecto desde SQLite (aun no implementado)."
+def _reconstruir_estado(plano: dict) -> dict:
+    """Inverso de _snapshot_plano: dicts -> dataclasses PFA y dict de frentes."""
+    estado = dict(plano)
+    estado["pfas"] = [
+        PFA(moea=d["moea"], mop=d["mop"], m=int(d["m"]), n=int(d["n"]),
+            corrida=int(d["corrida"]), puntos=d["puntos"],
+            archivo=d.get("archivo", ""))
+        for d in (plano.get("pfas") or [])]
+    estado["frentes_ref"] = {(f["mop"], int(f["m"])): f["puntos"]
+                             for f in (plano.get("frentes_ref") or [])}
+    return estado
+
+
+def guardar_proyecto(estado: dict, ruta) -> None:
+    """Guarda el snapshot de sesion `estado` en el archivo .sqlite `ruta`."""
+    persistence.guardar(_snapshot_plano(estado), ruta)
+
+
+def proyecto_a_bytes(estado: dict) -> bytes:
+    """Snapshot como bytes .sqlite, para ofrecerlo como descarga en la UI
+    (el disco de Streamlit Cloud es efimero: no sirve una ruta fija)."""
+    return persistence.a_bytes(_snapshot_plano(estado))
+
+
+def cargar_proyecto(fuente) -> dict:
+    """
+    Carga un snapshot desde una ruta .sqlite o desde BYTES subidos (upload).
+    Devuelve el estado con los PFA reconstruidos como dataclasses y los
+    frentes como {(mop, m): puntos}. Propaga FileNotFoundError/ValueError
+    con mensajes claros (la UI los muestra sin tumbar la app).
+    """
+    if isinstance(fuente, (bytes, bytearray)):
+        plano = persistence.desde_bytes(fuente)
+    else:
+        plano = persistence.cargar(fuente)
+    return _reconstruir_estado(plano)
