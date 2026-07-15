@@ -50,17 +50,14 @@ def _debe_reprocesar(archivos, firma_nueva, firma_guardada, hay_datos) -> bool:
 
 def render() -> None:
     st.subheader("Paso 1 · Carga y organizacion de datos")
-    st.caption(
-        "Se cargan las aproximaciones al frente de Pareto (PFA) reales. La app NO "
-        "ejecuta MOEAs: solo evalua y visualiza resultados ya generados."
-    )
+    st.caption("Sube tus PFA y sus frentes de referencia.")
 
     col_izq, col_der = st.columns([1.1, 1], gap="large")
 
     with col_izq:
         st.markdown("#### 1) Subir datos")
         archivos = st.file_uploader(
-            "Arrastra un .zip (carpetas por MOEA) o varios .pof sueltos",
+            "Arrastra tus archivos",
             type=["zip", "pof", "csv", "txt", "dat", "pf"],
             accept_multiple_files=True, key="up_pfa",
             help="Flujo principal: un .zip con una carpeta por MOEA y los .pof "
@@ -102,9 +99,13 @@ def render() -> None:
             st.success(f"✓ {len(pfas)} PFA ya cargados{omitidos_txt}. "
                        "Sube de nuevo solo si quieres reemplazar.")
 
-        st.markdown("#### 2) Mapeo (MOEA / MOP / m / n / corrida)")
-        st.caption("Autocompletado desde el nombre de cada archivo "
-                   "({MOEA}_{MOP}_{m}D_N{N}_R{run}.pof).")
+        st.markdown(
+            "**2) Mapeo (MOEA / MOP / m / n / corrida)**",
+            help="Autocompletado desde el nombre de cada archivo "
+                 "({MOEA}_{MOP}_{m}D_N{N}_R{run}.pof). "
+                 f"Estandar de literatura: {CORRIDAS_ESTANDAR} corridas por par "
+                 f"(MOEA, MOP); minimo recomendado: {CORRIDAS_MINIMAS}.",
+        )
         df_map = (services.mapeo_desde_pfas(pfas) if pfas
                   else pd.DataFrame(columns=services.COLS_MAPEO))
         st.data_editor(
@@ -116,13 +117,9 @@ def render() -> None:
                 "corrida": st.column_config.NumberColumn(min_value=0, step=1),
             },
         )
-        st.caption(
-            f"Estandar de literatura: {CORRIDAS_ESTANDAR} corridas por par "
-            f"(MOEA, MOP); minimo recomendado: {CORRIDAS_MINIMAS}."
-        )
 
     with col_der:
-        st.markdown("#### Vista previa de un PFA")
+        st.markdown("**Vista previa de un PFA**")
         if pfas:
             opciones = [p.archivo for p in pfas]
             elegido = st.selectbox("Archivo", opciones, key="preview_sel")
@@ -132,21 +129,16 @@ def render() -> None:
             st.dataframe(services.preview_de_pfa(pfa, 10),
                          width="stretch", hide_index=True)
         else:
-            components.placeholder(
-                "los puntos del PFA seleccionado",
-                "Sube datos para ver las primeras filas (N puntos x m objetivos).",
-            )
+            components.placeholder("los puntos del PFA seleccionado")
 
-        st.markdown("#### Frentes de referencia")
-        st.caption("Necesarios para indicadores basados en distancia "
-                   "(IGD, IGD+, R2, Delta p, Epsilon+). Sube un .zip con los "
-                   "POF sueltos en la raiz.")
+        st.markdown("**Frentes de referencia**")
         ref_archivos = st.file_uploader(
             "Subir frente(s) de referencia (.zip)",
             type=["zip"],
             accept_multiple_files=True, key="up_ref",
-            help="Cada archivo del zip debe llamarse {MOP}_{m:02d}D.pof y estar "
-                 "en la raiz del zip.",
+            help="Necesarios para indicadores basados en distancia "
+                 "(IGD, IGD+, R2, Delta p, Epsilon+). Cada archivo del zip debe "
+                 "llamarse {MOP}_{m:02d}D.pof y estar en la raiz del zip.",
         ) or []
 
         # Misma guarda que arriba: el uploader vacio no pisa los frentes cargados.

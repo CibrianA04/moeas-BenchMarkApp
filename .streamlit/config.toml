@@ -12,16 +12,16 @@
 base = "dark"
 
 # Color de acento: botones, sliders, enlaces, foco de widgets, etc.
-primaryColor = "#2E7D57"
+primaryColor = "#4d9fff"              # azul brillante, buen contraste
 
 # Fondo principal (el area central de la app).
-backgroundColor = "#1b2a4a"
+backgroundColor = "#142446"           # tu azul, un poco más profundo
 
 # Fondo secundario (barra lateral, cajas, inputs).
-secondaryBackgroundColor = "#2f3d5f"
+secondaryBackgroundColor = "#0a1220"  # tu azul actual como secundario
 
 # Color del texto.
-textColor = "#FAFAFA"
+textColor = "#e8eef7"
 
 # Tipografia: "sans serif", "serif" o "monospace".
 font = "sans serif"
