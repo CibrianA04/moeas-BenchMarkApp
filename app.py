@@ -34,7 +34,6 @@ def main() -> None:
     sidebar.render()             # configuracion global + navegacion con gating
 
     st.title("Benchmarking de MOEAs ")
-    st.caption("Flujo: Datos -> Indicadores -> Resultados -> Visualizacion.")
 
     # Flujo siempre visible: en que paso estamos y cuales se completaron.
     components.stepper()

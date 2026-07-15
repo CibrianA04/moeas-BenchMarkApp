@@ -77,8 +77,6 @@ def _mostrar_figura(pfa, titulo: str) -> None:
 
 def _render_mediana(pfas, resultados) -> None:
     """Flujo principal: elegir escenario/MOEA/indicador y graficar la MEDIANA."""
-    st.caption("Se grafica la corrida MEDIANA por indicador (el frente 'típico'), "
-               "no una corrida arbitraria.")
     med = statistics.corrida_mediana(resultados)
 
     c1, c2, c3 = st.columns(3)
@@ -94,7 +92,10 @@ def _render_mediana(pfas, resultados) -> None:
                    if (r["mop"], r["m"], r["N"]) == esc and r["moea"] == moea})
     idx_hv = inds.index("HV") if "HV" in inds else 0   # default: mediana por HV
     ind_id = c3.selectbox("Indicador de la mediana", inds, index=idx_hv,
-                          key="viz_ind")
+                          key="viz_ind",
+                          help="Se grafica la corrida MEDIANA segun este "
+                               "indicador (el frente 'tipico'), no una corrida "
+                               "arbitraria.")
 
     sel = med[(med["mop"] == mop) & (med["m"] == m) & (med["N"] == n_pob)
               & (med["moea"] == moea) & (med["indicador"] == ind_id)]

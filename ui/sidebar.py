@@ -72,7 +72,10 @@ def _aplicar_carga_pendiente() -> None:
 
 def _controles_proyecto() -> None:
     """Guardar (snapshot -> descarga .sqlite) y Cargar (upload -> rehidratar)."""
-    if st.button("Guardar proyecto", width="stretch"):
+    if st.button("Guardar proyecto", width="stretch",
+                 help="Snapshot de la sesión actual (datos, selección y "
+                      "resultados; sin parámetros de cálculo). Se entrega como "
+                      "descarga porque el disco del servidor es efímero."):
         try:
             st.session_state[_K_BYTES] = services.proyecto_a_bytes(_snapshot_estado())
         except Exception as exc:  # noqa: BLE001 (guardar nunca tumba la app)
@@ -85,9 +88,6 @@ def _controles_proyecto() -> None:
                            file_name=f"{nombre}.sqlite",
                            mime="application/x-sqlite3",
                            key="dl_proyecto", width="stretch")
-    st.caption("Snapshot de la sesión actual (datos, selección y resultados; "
-               "sin parámetros de cálculo). Se entrega como descarga porque el "
-               "disco del servidor es efímero.")
 
     subida = st.file_uploader("Cargar proyecto (.sqlite)",
                               type=["sqlite", "db"], key="up_proyecto")
@@ -120,7 +120,6 @@ def render() -> None:
 
         # ── Lectura de CSV (detalle plegado: no estorba la demo de flujo) ──────
         with st.expander("Lectura de CSV (avanzado)"):
-            st.caption("Como interpretar los archivos de PFA.")
             sep = st.selectbox(
                 "Separador de columnas",
                 ["Coma  ( , )", "Punto y coma  ( ; )", "Tabulador  ( \\t )",
@@ -157,7 +156,7 @@ def render() -> None:
                               width="stretch"):
                 state.ir_a(i)
                 st.rerun()
-        st.caption("Cada paso se desbloquea al completar el anterior.")
+        st.caption("Se desbloquean en orden.")
 
         st.divider()
         st.caption("v0.2 · evaluacion y visualizacion de PFAs")

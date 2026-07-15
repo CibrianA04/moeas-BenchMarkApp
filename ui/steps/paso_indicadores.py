@@ -106,8 +106,7 @@ def _evaluar(seleccion: list[str]) -> None:
 
 def render() -> None:
     st.subheader("Paso 2 · Indicadores de calidad")
-    st.caption("Cada PFA pasara por cada indicador elegido para producir los "
-               "valores que luego se resumen por (MOEA, MOP).")
+    st.caption("Elige los indicadores y evalúa.")
 
     todos = list(indicators.CATALOGO.values())
     nombre_por_id = {m.id: m.nombre for m in todos}
@@ -135,9 +134,16 @@ def render() -> None:
     for ind_id in seleccion:
         meta = indicators.CATALOGO[ind_id]
         with st.expander(meta.nombre, expanded=False):
-            st.caption(meta.descripcion)
+            # Linea unica visible (sentido); el resto de la ficha va al tooltip.
+            detalles = [meta.descripcion, _COMP[meta.compliance] + "."]
             if ind_id == "HV":
-                st.caption("Calculado via pymoo.")
+                detalles.append("Calculado via pymoo.")
+            if meta.requiere_ref:
+                detalles.append("Requiere frente de referencia (paso Datos).")
+            sentido = ("mayor mejor (max)" if meta.sentido == "max"
+                       else "menor mejor (min)")
+            st.markdown(f"Sentido: **{sentido}**", help=" ".join(detalles))
+            if ind_id == "HV":
                 modo = st.radio("Punto de referencia",
                                 ["Automatico (nadir)", "1.1 x nadir", "Manual"],
                                 horizontal=True, key=f"hv_{ind_id}")
@@ -153,11 +159,6 @@ def render() -> None:
             elif ind_id == "SPD":
                 st.number_input("Parametro theta", value=10.0, step=1.0,
                                 key=f"theta_{ind_id}")
-            if meta.requiere_ref:
-                st.caption("Requiere frente de referencia (paso Datos).")
-            st.caption(_COMP[meta.compliance])
-            st.caption("Sentido: " + ("mayor mejor (max)." if meta.sentido == "max"
-                                      else "menor mejor (min)."))
 
     st.divider()
     c_atras, c_eval = st.columns([1, 2])
