@@ -67,6 +67,24 @@ def test_figuras_m4_m5_devuelven_figure_del_tipo_correcto():
                 figures.cerrar(fig)
 
 
+def test_parallel_estilo_doc_paneles_y_rango_global():
+    # Estructura del parallel_coord del doc: m-1 paneles pegados y rango
+    # vertical = min/max GLOBAL de la matriz (SIN normalizar a [0,1]).
+    for P in (P2, P3, P5):
+        fig = figures.figura_parallel(P, titulo="t")
+        try:
+            assert isinstance(fig, Figure)
+            m = P.shape[1]
+            assert len(fig.axes) == max(m - 1, 1)     # un panel por tramo
+            for ax in fig.axes:                       # mismo rango en todos
+                lo, hi = ax.get_ylim()
+                assert lo == pytest.approx(P.min())
+                assert hi == pytest.approx(P.max())
+                assert len(ax.lines) == len(P)        # cada linea, completa
+        finally:
+            figures.cerrar(fig)
+
+
 def test_bubble_codifica_f4_en_color_con_colorbar():
     con_color = figures.figura_bubble(P4)         # m>=4: colorbar de $f_4$
     simple = figures.figura_bubble(P3)            # m==3: scatter 3D sin color

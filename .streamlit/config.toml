@@ -1,29 +1,11 @@
 # ============================================================================
-#  Tema de la app (colores y tipografia).  Streamlit lo lee de ESTE archivo:
-#      .streamlit/config.toml   (en la raiz del proyecto)
-#
-#  IMPORTANTE: los cambios aqui solo se aplican al REINICIAR la app
-#  (Ctrl+C y volver a lanzar).  Para probar colores en vivo sin reiniciar,
-#  usa el menu  ⋮ (arriba a la derecha) -> Settings -> "Edit active theme".
+#  Tema de la app (colores y tipografia).
 # ============================================================================
 
 [theme]
-# "light" (claro) o "dark" (oscuro). Es la base sobre la que se aplican tus colores.
 base = "dark"
-
-# Color de acento: botones, sliders, enlaces, foco de widgets, etc.
-primaryColor = "#4d9fff"              # azul brillante, buen contraste
-
-# Fondo principal (el area central de la app).
-backgroundColor = "#213051"           # tu azul, un poco más profundo
-
-# Fondo secundario (barra lateral, cajas, inputs).
-secondaryBackgroundColor = "#091e42"  # tu azul actual como secundario
-
-# Color del texto.
-textColor = "#e8eef7"
-
-# Tipografia: "sans serif", "serif" o "monospace".
-font = "sans serif"
-
-
+primaryColor = "#2e8fff"
+backgroundColor = "#0e162a"           # Azul noche profundo
+secondaryBackgroundColor = "#1d263f"  # Sidebar que contrasta de forma natural
+textColor = "#f1f5f9"                 # Texto claro con un levísimo tinte frío
+font = "sans serif" 

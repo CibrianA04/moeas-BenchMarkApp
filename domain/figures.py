@@ -166,29 +166,42 @@ def figura_parallel(puntos: np.ndarray, *, titulo: str | None = None,
                     etiquetas: list[str] | None = None,
                     figsize: tuple[float, float] = (7, 5),
                     escala_fuente: float = 1.0) -> "plt.Figure":
-    """Coordenadas paralelas: un eje vertical por objetivo, una linea por
-    solucion (color darkblue y grid como el parallel_coord del doc)."""
+    """
+    Coordenadas paralelas con la ESTRUCTURA del parallel_coord del doc: m-1
+    sub-ejes en fila pegados (wspace=0); SIN normalizar (ylim y ticks con el
+    min/max GLOBAL de toda la matriz, igual en todos los paneles); cada
+    solucion se dibuja completa en cada panel y el xlim [x_i, x_i+1] la
+    recorta, con lo que la linea cruza continua de un panel al siguiente.
+    Port headless: recibe el ndarray, respeta figsize/escala_fuente y NO hace
+    savefig/show (mismas diferencias deliberadas que el resto de los ports).
+    """
     P = np.asarray(puntos, dtype=float)
-    n, m = P.shape
+    m = P.shape[1]
     etiquetas = _etiquetas_f(m, etiquetas)
-    P = _normalizar_01(P)
-    fig, ax = plt.subplots(figsize=figsize)
-    xs = np.arange(1, m + 1)
-    for i in range(n):
-        ax.plot(xs, P[i], color="darkblue", lw=0.8 * escala_fuente,
-                alpha=0.6, zorder=2)
-    ax.set_xticks(xs)
-    ax.set_xticklabels(etiquetas, fontsize=12 * escala_fuente)
-    ax.set_xlim(1, m)
-    ax.set_ylim(-0.02, 1.02)
-    ax.minorticks_on()
-    ax.grid(which="major", linestyle="--", linewidth=0.8, color="black", zorder=0)
-    ax.grid(which="minor", linestyle=":", linewidth=0.5, color="gray", zorder=1)
-    ax.tick_params(axis="y", labelsize=10 * escala_fuente)
-    ax.set_xlabel("Objetivos", fontsize=12 * escala_fuente)
-    ax.set_ylabel("Valor normalizado", fontsize=12 * escala_fuente)
+    lo, hi = float(P.min()), float(P.max())
+    if hi <= lo:                              # matriz constante: evita ylim nulo
+        lo, hi = lo - 0.5, hi + 0.5
+    x = np.arange(1, m + 1)
+    fig, axes = plt.subplots(1, max(m - 1, 1), sharey=False, figsize=figsize)
+    axes = np.atleast_1d(axes)                # m==2: un solo eje, misma ruta
+    for i, ax in enumerate(axes):
+        for fila in P:                        # linea completa; el xlim recorta
+            ax.plot(x, fila, color="darkblue", lw=0.8 * escala_fuente, zorder=2)
+        ax.set_xlim(x[i], x[i + 1])           # tramo entre objetivos consecutivos
+        ax.set_xticks([x[i], x[i + 1]])
+        ax.set_xticklabels([etiquetas[i], etiquetas[i + 1]],
+                           fontsize=12 * escala_fuente)
+        ax.set_ylim(lo, hi)                   # rango GLOBAL comun, sin normalizar
+        ax.minorticks_on()
+        ax.grid(which="major", linewidth=0.8, color="black", zorder=0)
+        ax.grid(which="minor", linewidth=0.4, color="black", zorder=0)
+        ax.tick_params(axis="y", labelsize=10 * escala_fuente)
+        if i != 0:
+            ax.tick_params(labelleft=False)   # solo el primer panel con escala
+    fig.subplots_adjust(wspace=0)             # paneles pegados, como el doc
+    fig.supxlabel("Objetivos", fontsize=12 * escala_fuente)
+    fig.supylabel("Valores de objetivo", fontsize=12 * escala_fuente)
     _titular(fig, titulo, escala_fuente)
-    fig.tight_layout()
     return fig
 
 
