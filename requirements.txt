@@ -3,14 +3,14 @@
 streamlit>=1.58     # capa de presentacion (ui/); usa la API moderna width="stretch"
 numpy>=1.24         # puntos de los PFA, preprocesamiento e indicadores
 pandas>=2.0         # lectura de .pof y tablas (resumen, ranking, exportaciones)
-matplotlib>=3.8     # motor UNICO de figuras (headless, backend Agg; .tex via PGF)
+matplotlib>=3.8     # motor de figuras (headless, backend Agg; .tex via PGF)
 jinja2>=3.1         # requerido por el Styler de pandas (tabla resaltada del Paso 3)
-pymoo>=0.6          # HV, IGD, IGD+ y GD (imports perezosos en domain/indicators.py)
-scipy>=1.11         # Mann-Whitney U y studentized_range (imports perezosos en domain/statistics.py)
+pymoo>=0.6          # HV, IGD, IGD+ y GD 
+scipy>=1.11         # Mann-Whitney U y studentized_range 
 
 # La descarga de figuras en .tex usa el backend PGF de matplotlib y necesita una
 # instalacion de LaTeX en el SISTEMA (xelatex/lualatex/pdflatex, p. ej. MiKTeX);
 # no es un paquete pip. Sin LaTeX, la app deshabilita sola esa descarga.
 
-# Desarrollo (no hace falta para ejecutar la app):
-pytest>=8.0         # suite de tests (lector .pof, indicadores, estadistica, figuras)
+# Desarrollo:
+pytest>=8.0  # suite de tests (lector .pof, indicadores, estadistica, figuras)
