@@ -134,3 +134,10 @@ python -m pytest tests/ -q
 - Nuevo **formato de exportacion de figura** -> ampliar `guardar_figura()`.
 
 
+## Abrir Aplicación desde máquina Ubuntu
+
+Ejecutar en Terminal las siguientes lineas (Previamente Instalada)
+
+cd moeas-BenchMarkApp
+source .venv/bin/activate
+streamlit run app.py
