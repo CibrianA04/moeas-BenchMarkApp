@@ -6,7 +6,7 @@ frente de Pareto (PFA) generadas por algoritmos evolutivos multiobjetivo
 calcula indicadores de calidad, aplica estadistica y produce tablas y figuras
 listas para publicar. Estancia Verano Delfin - CICESE.
 
-## Que hace hoy (estado: funcional)
+## Estado funcional
 
 - **Ingesta** de PFAs desde un `.zip` (carpetas por MOEA) o `.pof` sueltos, con
   validacion cruzada nombre/cabecera/contenido; un archivo invalido se omite y
@@ -39,7 +39,7 @@ listas para publicar. Estancia Verano Delfin - CICESE.
 4. **Visualizacion** — graficar el frente de la corrida MEDIANA del indicador
    elegido (o una corrida manual si aun no se evalua) y descargar la figura.
 
-## Arquitectura (regla dura)
+## Arquitectura
 
 Tres capas con dependencia en un solo sentido:
 
@@ -133,9 +133,4 @@ python -m pytest tests/ -q
   entrada en `METODOS`; si aplica a m>3, tambien en `_FIGURAS_M4`).
 - Nuevo **formato de exportacion de figura** -> ampliar `guardar_figura()`.
 
-## Documentacion
 
-El **Manual de instalacion**, el **Manual de usuario** y el documento de
-**Trabajo futuro** se entregan por separado (no forman parte del repo). El
-contrato con el script R del asesor y las decisiones de diseno estan en
-`CLAUDE.md`.
