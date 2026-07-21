@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Facade del dominio para operaciones respaldadas por la capa de DATOS.
+Fachada del dominio para operaciones respaldadas por la capa de DATOS.
 
 Existe para mantener la dependencia en un solo sentido: la UI llama a estos
 servicios (dominio) y el dominio llama a 'data'. Asi la UI nunca importa 'data'.

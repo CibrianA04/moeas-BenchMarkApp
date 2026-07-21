@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Construccion HEADLESS de figuras con matplotlib (motor UNICO de graficas).
+Construccion HEADLESS de figuras con matplotlib (motor de graficas).
 
 Importante: se fija el backend 'Agg' (sin ventana), se devuelven objetos Figure
 y NO se importa Streamlit. La capa de presentacion hace st.pyplot(fig).
@@ -11,7 +11,7 @@ import io
 import shutil
 
 import matplotlib
-matplotlib.use("Agg")            # backend sin pantalla; debe ir antes de pyplot
+matplotlib.use("Agg")            # backend sin pantalla; 
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np               # noqa: E402
 
@@ -76,11 +76,11 @@ def fig_parallel(puntos: np.ndarray, etiquetas: list[str] | None = None,
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  Port de Plot2D/Plot3D de MOEA-visualization-main (estilo del doc, HEADLESS).
+#  Port de Plot2D/Plot3D de MOEA-visualization-main 
 #
 #  Diferencias deliberadas con el script original:
 #  - Reciben puntos YA parseados (ndarray (n, m)); NO leen archivos (el set_data
-#    del doc usaba delimiter=" " + skiprows=1: columna NaN y cabecera '#' mal).
+#    de R usaba delimiter=" " + skiprows=1: columna NaN y cabecera '#' mal).
 #  - Devuelven un Figure; NO hacen savefig/show (exportar es de guardar_figura).
 #  - Defaults de PANTALLA (fuentes ~10-14 pt, figsize chico), no los de poster
 #    del doc (font_size=137.5, figsize 60x60); `escala_fuente` multiplica los
@@ -141,7 +141,7 @@ def figura_frente_3d(puntos: np.ndarray, *, titulo: str | None = None,
 #  que Plot2D/Plot3D: reciben ndarray (n, m) ya parseado, devuelven Figure sin
 #  savefig/show, defaults de PANTALLA con `escala_fuente`, y una sola vista.
 #  Ademas normalizan cada columna a [0, 1] (objetivos con escalas distintas no
-#  son comparables en un mismo eje); el heatmap del doc ya normalizaba asi.
+#  son comparables en un mismo eje); el heatmap de R ya normalizaba asi.
 # ─────────────────────────────────────────────────────────────────────────────
 def _normalizar_01(P: np.ndarray) -> np.ndarray:
     """Normaliza cada columna a [0,1]; una columna constante queda en 0."""
@@ -347,7 +347,7 @@ def figura_critical_differences(cd, *, titulo: str | None = None,
     de rangos (mejor rango a la IZQUIERDA), cada MOEA colgado de su rango
     promedio, regla con la magnitud de la CD y barras gruesas uniendo los
     grupos que NO difieren significativamente. Todo se dibuja en coordenadas
-    de datos con el eje apagado (el diagrama clasico no tiene marco).
+    de datos con el eje apagado 
     """
     rangos = dict(cd.rank_promedio)          # ya viene ordenado mejor -> peor
     moeas = list(rangos)

@@ -4,19 +4,18 @@ Evaluacion por lotes: corre los indicadores elegidos sobre TODAS las corridas
 cargadas y devuelve los valores POR CORRIDA, agrupados para comparar.
 
 Esta capa NO calcula medias, desviaciones ni pruebas estadisticas: eso es de
-`domain/statistics.py` y, como fuente de verdad, del script R del doctor (ver
-CLAUDE.md §5). Aqui solo se producen los valores crudos por corrida.
+`domain/statistics.py`
 
-Escenario = (MOP, m, N). N = tamano de poblacion (confirmado). Todas las corridas
+Escenario = (MOP, m, N). N = tamano de poblacion. Todas las corridas
 de un mismo escenario comparten UN frente de referencia y UN punto de referencia
 de HV, para que sus valores sean comparables entre si.
 
 Politica del punto de referencia de HV (nadir / margen sobre el rango / fijo): es
-una eleccion de INGENIERIA para hacer comparables las corridas, PENDIENTE de
-confirmar con el doc. El modo default "nadir_x1.1" calcula en realidad
+una eleccion de INGENIERIA para hacer comparables las corridas
+}El modo default "nadir_x1.1" calcula en realidad
 nadir + 0.1*(nadir - ideal): un margen del 10% del RANGO por objetivo, robusto al
 signo (multiplicar el nadir por 1.1 literal, con objetivos NEGATIVOS como
-VNT2/VNT3, desplazaba el punto en el sentido EQUIVOCADO -> quedaba dominado y
+VNT2/VNT3, desplazaba el punto en el sentido EQUIVOCADO quedaba dominado y
 HV = 0). Equivale a nadir*1.1 solo si ideal = 0 en cada objetivo. La clave del
 modo conserva su nombre historico para no romper llamadas ni el mapeo de la UI.
 """
@@ -123,7 +122,7 @@ def evaluar(pfas: list[PFA], indicadores_ids: list[str],
         if progreso is not None:
             progreso(idx, total_escenarios, f"{mop} · m={m} · N={n}")
 
-        # 1) Frente de referencia: UNO por escenario (solo si hace falta;
+        # Frente de referencia: UNO por escenario (solo si hace falta;
         #    csv_io lo cachea por ruta, asi que repetir MOP no reparsea).
         frente = None
         if ids_requiere_ref:
@@ -139,7 +138,7 @@ def evaluar(pfas: list[PFA], indicadores_ids: list[str],
                     "motivo": str(exc),
                 })
 
-        # 2) Punto de referencia de HV: UNO por escenario (mismo para todas las corridas).
+        # Punto de referencia de HV: UNO por escenario (mismo para todas las corridas).
         punto_hv = _punto_hv(grupo, hv_modo, hv_punto_fijo, m) if calcula_hv else None
 
         # Indicadores a intentar aqui: si no hay frente, se omiten los requiere_ref.
@@ -148,7 +147,7 @@ def evaluar(pfas: list[PFA], indicadores_ids: list[str],
             if not (indicators.CATALOGO[i].requiere_ref and frente is None)
         ]
 
-        # 2b) Evaluadores basados en referencia: UNA construccion por escenario
+        # Evaluadores basados en referencia: UNA construccion por escenario
         #     (construir IGD(ref) por corrida re-procesaba el frente completo;
         #     Dp ademas comparte el mismo objeto IGD). HV y los sin-referencia
         #     siguen por calcular().
@@ -173,7 +172,7 @@ def evaluar(pfas: list[PFA], indicadores_ids: list[str],
                         else:                               # HV / sin referencia
                             v = indicators.calcular(
                                 ind_id, p.puntos, ref=frente, punto_ref=punto_hv)
-                    except Exception as exc:  # noqa: BLE001 (una corrida mala no aborta)
+                    except Exception as exc:  # noqa: BLE001 una corrida mala no aborta
                         omitidos.append({
                             "tipo": "corrida_fallida", "mop": mop, "m": m, "N": n,
                             "moea": moea, "indicador": ind_id, "corrida": p.corrida,

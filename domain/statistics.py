@@ -2,8 +2,7 @@
 """
 Estadistica de apoyo para la UI, el graficado y la tabla de desempeno.
 
-Contrato (ver CLAUDE.md §5): el script del doctor `createIndicatorTable.R` es el
-ORACULO contra el que se valida la tabla (via `exportar_r.py`); la app TRADUCE
+el script `createIndicatorTable.R` es contra el que se valida la tabla (via `exportar_r.py`); la app TRADUCE
 su logica a Python: aqui vive el ranking y en `domain/tables.py` la tabla
 LaTeX/CSV. Este modulo ofrece, consumiendo la salida de
 `evaluacion.evaluar` ({mop, m, N, moea, indicador, valores:[...por corrida...]}):
@@ -85,8 +84,7 @@ def resumen(resultados) -> pd.DataFrame:
 
 
 # CONVENCION (ajustable): con n PAR se toma la mediana INFERIOR, es decir el
-# elemento en el indice floor((n-1)/2) tras ordenar. Si el doc prefiere la
-# superior, cambiar a n // 2.
+# elemento en el indice floor((n-1)/2) tras ordenar.
 def indice_mediana(valores) -> int:
     """
     Indice (posicion en `valores`) de la corrida cuyo valor es la MEDIANA del
@@ -109,7 +107,7 @@ _COLS_MEDIANA = ["mop", "m", "N", "indicador", "moea", "indice", "valor"]
 
 def corrida_mediana(resultados) -> pd.DataFrame:
     """
-    Por (MOP, m, N, indicador, MOEA), identifica la corrida MEDIANA (mediana POR
+    Por (MOP, m, N, indicador, MOEA), identifica la corrida mediana (mediana POR
     ese indicador). Devuelve `indice` (posicion en `valores` = etiqueta de corrida)
     y su `valor`. Sirve para graficar el frente "tipico" (R no da la mediana).
     """
@@ -132,8 +130,6 @@ _COLS_SIGNIF = ["mop", "m", "N", "indicador", "sentido", "ganador",
 def significancia(resultados, alpha: float = 0.05) -> pd.DataFrame:
     """
     Significancia por (MOP, m, N, indicador), con la MISMA config del script R
-    del doctor (su tabla sigue siendo el oraculo: esta debe coincidir con ella):
-
     - Ganador = MOEA con la MEJOR media segun CATALOGO[indicador].sentido
       ('max' -> media mayor; 'min' -> media menor).
     - Mann-Whitney U (las corridas son muestras INDEPENDIENTES, no pareadas),
@@ -143,7 +139,7 @@ def significancia(resultados, alpha: float = 0.05) -> pd.DataFrame:
 
     Grupos con < 2 MOEAs se omiten (no hay con quien comparar).
     """
-    from scipy.stats import mannwhitneyu       # import perezoso (dependencia real)
+    from scipy.stats import mannwhitneyu       # import 
 
     # Agrupar por (MOP, m, N, indicador) -> {moea: valores} (orden de aparicion).
     grupos: dict[tuple, dict[str, list]] = {}
@@ -255,7 +251,7 @@ def critical_differences(resultados,
     """
     Datos para el CD plot estandar (Friedman + post-hoc de Nemenyi; Demsar
     2006), POR indicador. REUTILIZA ranking()/rango_promedio() (la traduccion
-    del avgRank del script R del doc): aqui NO se recalculan rangos.
+    del avgRank del script R ): aqui NO se recalculan rangos.
 
     CD = q_alpha(k, inf)/sqrt(2) * sqrt(k(k+1)/(6N)), con q de la distribucion
     del rango studentizado (scipy; sin tablas hardcodeadas). Dos MOEAs cuyos

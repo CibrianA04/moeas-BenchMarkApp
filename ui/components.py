@@ -14,7 +14,7 @@ from . import state
 
 
 def stepper() -> None:
-    """Dibuja el flujo de los 4 pasos: actual en negrita, completados con [x]."""
+    """Dibuja el flujo de los 4 pasos"""
     actual = state.paso_actual()
     partes = []
     for i, nombre in enumerate(state.PASOS):
@@ -26,8 +26,7 @@ def stepper() -> None:
 
 def placeholder(titulo: str, descripcion: str = "") -> None:
     """
-    Hueco visible mientras NO hay datos cargados: indica QUE ira aqui,
-    sin inventar numeros.
+    Hueco visible mientras NO hay datos cargados
     """
     with st.container(border=True):
         st.markdown(f"**Aqui ira:** {titulo}")
@@ -41,11 +40,11 @@ def descargas(clave: str, formatos: list[str],
     """
     Selector de formato + boton de descarga.
 
-    El PRIMER formato de la lista es el que sale por DEFECTO (p. ej. PNG en
-    figuras, CSV en tablas); el usuario puede elegir cualquier otro.
+    El pfimer formato de la lista es el que sale por DEFECTO (p. ej. PNG en
+    figuras, CSV en tablas) el usuario puede elegir cualquier otro.
 
     `datos_por_formato`: {formato: (datos_bytes, nombre_archivo, mime)}. Si el
-    formato elegido trae datos, se dibuja un `st.download_button` REAL; si no
+    formato elegido trae datos, se dibuja un `st.download_button` real; si no
     (o si es None), el boton queda deshabilitado (formato aun sin exportar).
     """
     c1, c2 = st.columns([1, 2])

@@ -2,10 +2,9 @@
 """
 Exportador al formato/ruta EXACTOS que lee el script
 CreateIndicator/createIndicatorTable.R. La app NO calcula medias/Wilcoxon/tabla
-aqui SOLO se escriben
-los valores de indicador POR CORRIDA en el arbol que ese script consume.
+aqui SOLO se escriben los valores de indicador POR CORRIDA en el arbol que ese script consume.
 
-Ruta que espera el R (de su propio codigo, linea 64):
+Ruta que espera el R
     {dirOut}/{MOEA}/{card}/{MOEA}_{MOP}_{m:02d}D.{ext}
   - Cada archivo: UNA columna, un valor por linea, un valor por corrida, SIN
     cabecera (el R hace read.table(header=FALSE) y usa la columna V1).

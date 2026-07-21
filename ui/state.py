@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Estado de la aplicacion y STEP GATING.
-
-st.session_state es la UNICA fuente de verdad. Cada paso se desbloquea solo si
+Cada paso se desbloquea solo si
 se completaron los anteriores.
 """
 from __future__ import annotations
@@ -61,7 +60,7 @@ def esta_completo(i: int) -> bool:
 
 
 def puede_ir_a(i: int) -> bool:
-    """GATING real: se puede entrar al paso i solo si TODOS los anteriores
+    """GATING real se puede entrar al paso i solo si TODOS los anteriores
     estan completos (el paso 0 siempre esta disponible)."""
     return all(st.session_state[K_COMP][:i])
 

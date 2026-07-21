@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """
 Preprocesamiento de cada PFA antes de evaluar indicadores.
-Todo aqui es puro (numpy); sin Streamlit.
+Todo aqui es puro (numpy sin Streamlit)
 
-Convencion: se asume MINIMIZACION en el espacio de objetivos (menor es mejor),
+Convencion: Minimizacion en el espacio de objetivos (menor es mejor),
 que es la convencion de los .pof de este proyecto y la que espera pymoo para HV.
 """
 from __future__ import annotations

@@ -2,9 +2,9 @@
 """
 Indicadores de calidad: catalogo + calculo. HV, IGD, IGD+, Eps+ y Dp se
 calculan (pymoo / numpy); R2, Riesz y SPD siguen pendientes de los parametros
-del doctor y lanzan NotImplementedError.
+lanzan NotImplementedError.
 
-Pareto-compliance es un atributo de PRIMERA CLASE: solo los indicadores
+Pareto-compliance es un atributo de Primera clase: solo los indicadores
 compliant (estricta/debil) permiten conclusiones fuertes. HV e IGD+ lo son;
 IGD, GD, MS no.
 """
@@ -65,14 +65,13 @@ def calcular(ind_id: str, puntos: np.ndarray,
     Calcula UN indicador sobre un PFA.
 
     - Valida `requiere_ref` contra el CATALOGO: si el indicador necesita frente de
-      referencia y `ref is None`, lanza ValueError.
+      referencia , lanza ValueError.
     - HV: via pymoo. Usa `punto_ref` (punto de referencia/nadir); si es None, se
       toma el nadir del propio conjunto 
-    - IGD, IGD+ y Dp: via pymoo (import perezoso por rama). Eps+ (epsilon aditivo)
+    - IGD, IGD+ y Dp: via pymoo . Eps+ (epsilon aditivo)
       se calcula con numpy (version de pymoo no trae el modulo de epsilon).
       Los cuatro usan el frente de referencia `ref` ya validado arriba.
-    - Dp acepta el parametro `p` (default 2) como CONVENCION PENDIENTE de confirmar
-      con el doc; ver `calcular`/rama "Dp" para el detalle.
+    - Dp acepta el parametro `p` (default 2?) PENDIENTE de implementar
     - R2/Riesz/SPD aun NO estan implementados: lanzan NotImplementedError.
     """
     if ind_id not in CATALOGO:
@@ -89,27 +88,27 @@ def calcular(ind_id: str, puntos: np.ndarray,
         return _hv_pymoo(puntos, punto_ref)
 
     if ind_id == "IGD":
-        from pymoo.indicators.igd import IGD   # import perezoso (dependencia opcional)
+        from pymoo.indicators.igd import IGD   # import 
         return float(IGD(np.asarray(ref, float))(np.asarray(puntos, float)))
 
     if ind_id == "IGD+":
-        from pymoo.indicators.igd_plus import IGDPlus   # import perezoso
+        from pymoo.indicators.igd_plus import IGDPlus   # import
         return float(IGDPlus(np.asarray(ref, float))(np.asarray(puntos, float)))
 
     if ind_id == "Eps+":
         # Epsilon ADITIVO por numpy: esta version de pymoo (0.6.1.x) no incluye el
-        # modulo pymoo.indicators.epsilon. Ver _eps_plus_aditivo.
+        # modulo pymoo.indicators.epsilon. 
         return _eps_plus_aditivo(puntos, ref)
 
     if ind_id == "Dp":
         # Delta_p = max(GD_p, IGD_p). `p` se expone (default 2) como CONVENCION
-        # PENDIENTE de confirmar con el doc, NO una decision cerrada. OJO: los GD/IGD
+        # PENDIENTE de implementar. OJO: los GD/IGD
         # de esta version de pymoo promedian distancias (equivale a p=1) y NO exponen
         # el exponente p; por eso hoy `p` NO se propaga al computo (queda como TODO
-        # hasta fijar la convencion exacta de Delta_p con el doc).
+        # hasta fijar la convencion exacta de Delta_p
         p = params.get("p", 2)  # noqa: F841  (inerte hasta fijar la convencion; ver arriba)
-        from pymoo.indicators.gd import GD    # import perezoso
-        from pymoo.indicators.igd import IGD  # import perezoso
+        from pymoo.indicators.gd import GD    # import
+        from pymoo.indicators.igd import IGD  # import
         R = np.asarray(ref, float)
         P = np.asarray(puntos, float)
         return max(float(GD(R)(P)), float(IGD(R)(P)))
@@ -128,10 +127,9 @@ def preparar_indicadores(ids, ref) -> dict:
     UNA vez por escenario y se reusan entre corridas; "Dp" comparte el MISMO
     objeto IGD que "IGD" (antes lo recalculaba). `calcular()` sigue siendo la
     via por-llamada (tests, usos sueltos); el MOTOR (evaluacion.evaluar) usa esta.
-
-    - Cubre: IGD, IGD+, Eps+, Dp. HV NO entra: su punto de referencia depende
-      de la union del escenario y lo maneja el motor via calcular().
-    - Ids no cubiertos (p. ej. R2, pendiente de convencion) caen a calcular()
+    Cubre: IGD, IGD+, Eps+, Dp. HV NO entra: su punto de referencia depende
+    de la union del escenario y lo maneja el motor via calcular().
+    Ids no cubiertos (p. ej. R2, pendiente de convencion) caen a calcular()
       DENTRO del callable: el error se lanza por corrida, preservando la
       semantica de `omitidos` del motor.
     """
@@ -171,7 +169,7 @@ def preparar_indicadores(ids, ref) -> dict:
 def _hv_pymoo(puntos: np.ndarray, punto_ref: np.ndarray) -> float:
     """
     Hypervolume via pymoo (minimizacion). `punto_ref` debe dominar (ser >= en cada
-    objetivo) a todos los puntos para que el HV sea > 0. Import perezoso: solo se
+    objetivo) a todos los puntos para que el HV sea > 0. Import: solo se
     necesita pymoo cuando de verdad se calcula HV.
     """
     from pymoo.indicators.hv import HV   # import perezoso (dependencia opcional)

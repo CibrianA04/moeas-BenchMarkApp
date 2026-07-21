@@ -57,7 +57,7 @@ def _aplicar_carga_pendiente() -> None:
     ss[state.K_OMIT] = estado.get("omitidos") or []
     ss.pop(_K_WIDGET_INDS, None)              # el multiselect se resiembra de K_INDS
 
-    # Gating: el completado guardado manda; con resultados cargados, Datos e
+    # Gating: el completado guardado manda con resultados cargados, Datos e
     # Indicadores cuentan como completos (asi Resultados queda alcanzable).
     comp = list(estado.get("completado") or [False] * len(state.PASOS))
     comp += [False] * (len(state.PASOS) - len(comp))   # por si viene corta
@@ -136,7 +136,7 @@ def render() -> None:
         st.divider()
         
             
-        # ── Progreso / navegacion con gating ───────────────────────────────────
+        # ── Progreso / navegacion con gating ────────
         st.markdown("### Pasos")
         actual = state.paso_actual()
         for i, nombre in enumerate(state.PASOS):

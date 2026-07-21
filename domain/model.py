@@ -28,7 +28,6 @@ class ConfigCSV:
         """
         Preset para archivos .pof: columnas separadas por ESPACIOS (sep r"\\s+",
         que tolera el espacio final de cada linea sin generar columnas NaN) y la
-        cabecera '# N m' tratada como comentario (comment='#').
         """
         return cls(separador=r"\s+", decimal=".", comentario="#", cabecera_Nm=True)
 

@@ -4,8 +4,7 @@ Lectura de archivos .pof (PFA) desde disco y desde un .zip subido por el usuario
 
 
 Formato .pof
-  - Linea 1 = cabecera '# N m' (N puntos, m objetivos). Puede faltar -> por eso se
-    salta con comment='#' (no con skiprows), aparezca o no.
+  - Linea 1 = cabecera '# N m' (N puntos, m objetivos). 
   - Resto: un punto por linea, m columnas separadas por ESPACIOS, con un espacio
     final sobrante. Decimal con punto, notacion cientifica, valores posiblemente
     NEGATIVOS. Lectura: sep=r"\\s+" (NO delimiter=" ", que mete una columna NaN).
@@ -36,7 +35,7 @@ _PATRON_NOMBRE = re.compile(
 
 
 class ErrorValidacionPFA(ValueError):
-    """La forma real del archivo no concuerda con la cabecera o el nombre (N, m)."""
+    """La forma real del archivo no concuerda con la cabecera o el nombre"""
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -72,8 +71,7 @@ def parsear_nombre(nombre: str) -> dict:
 
 def leer_cabecera(fuente) -> tuple[int, int] | None:
     """
-    Lee la 1a linea de 'fuente' (ruta de disco o file-like). Si empieza con '#' y
-    trae dos enteros '# N m', devuelve (N, m); si no hay cabecera o no es parseable,
+    Lee la 1a linea de 'fuente' (ruta de disco o file-like). si no hay cabecera o no es parseable,
     devuelve None. No consume el resto de la fuente (en file-likes restaura la pos).
     """
     if hasattr(fuente, "read"):  # file-like (BytesIO, stream del zip, ...)
@@ -100,7 +98,7 @@ def leer_cabecera(fuente) -> tuple[int, int] | None:
 
 
 def _leer_dataframe(fuente, config: ConfigCSV) -> pd.DataFrame:
-    """Lee SOLO los puntos (la cabecera '#' se salta como comentario)."""
+    """Lee SOLO los puntos """
     # Motor C de pandas (default): soporta sep=r"\s+" de forma NATIVA, sin
     # fallback ni ParserWarning, y es ~6x mas rapido que engine="python".
     return pd.read_csv(
@@ -115,8 +113,8 @@ def _leer_dataframe(fuente, config: ConfigCSV) -> pd.DataFrame:
 def _exigir_iguales(archivo: str, etiqueta: str, real: int,
                     valor_nombre: int, valor_cabecera: int | None) -> None:
     """
-    Falla con ErrorValidacionPFA si 'real', 'nombre' y (si existe) 'cabecera' no
-    coinciden, diciendo QUE archivo y QUE tres valores chocan. Nunca recorta/rellena.
+    Falla con ErrorValidacionPFA si 'real', 'nombre' y 'cabecera' no
+    coinciden, diciendo QUE archivo y QUE tres valores chocan.
     """
     valores = {"real": real, "nombre": valor_nombre}
     if valor_cabecera is not None:
@@ -131,9 +129,7 @@ def _exigir_iguales(archivo: str, etiqueta: str, real: int,
 def _construir_pfa(df: pd.DataFrame, nombre: str,
                    cabecera: tuple[int, int] | None, config: ConfigCSV) -> PFA:
     """
-    NUCLEO COMPARTIDO (disco y zip): validacion cruzada + construccion del PFA.
-    Exige: columnas reales == m(nombre) == m(cabecera?); filas reales == N(nombre)
-    == N(cabecera?).
+    NUCLEO COMPARTIDO (disco y zip): validacion cruzada + construccion del PFA
     """
     meta = parsear_nombre(nombre)          # ValueError si el nombre no matchea
     filas, columnas = df.shape
@@ -165,7 +161,7 @@ def leer_pfa(ruta, config: ConfigCSV | None = None) -> PFA:
 def leer_pfa_buffer(fuente, nombre: str, config: ConfigCSV | None = None) -> PFA:
     """
     Lee un .pof desde un FILE-LIKE (lo usa el zip y la subida de la UI). La UI lee
-    los bytes y los pasa aqui; la capa de datos nunca ve el objeto de streamlit.
+    los bytes y los pasa aqui, la capa de datos nunca ve el objeto de streamlit.
     """
     config = config or ConfigCSV.preset_pof()
     datos = fuente.read()
@@ -188,7 +184,7 @@ def _reportar(errores: list | None, nombre: str, exc: Exception) -> None:
 
 def iterar_pofs(rutas, config: ConfigCSV | None = None,
                 errores: list | None = None) -> Iterator[PFA]:
-    """Genera PFA desde rutas de DISCO; salta y reporta los que fallen."""
+    """Genera PFA desde rutas de Disco, salta y reporta los que fallen."""
     for ruta in rutas:
         try:
             yield leer_pfa(ruta, config)
@@ -197,13 +193,13 @@ def iterar_pofs(rutas, config: ConfigCSV | None = None,
 
 
 def _es_basura_mac(nombre: str, base: str) -> bool:
-    """True para basura que meten los zips hechos en Mac (__MACOSX, '._...')."""
+    """True para basura que meten los zips hechos"""
     componentes = re.split(r"[\\/]", nombre)
     return "__MACOSX" in componentes or base.startswith("._")
 
 
 def _verificar_carpeta(nombre: str, pfa: PFA) -> None:
-    """La carpeta contenedora deberia ser el MOEA; si no, solo advierte (no aborta)."""
+    """La carpeta contenedora deberia ser el MOEA, si no, solo advierte."""
     componentes = [c for c in re.split(r"[\\/]", nombre) if c]
     if len(componentes) >= 2:
         carpeta = componentes[-2]
@@ -215,7 +211,7 @@ def _verificar_carpeta(nombre: str, pfa: PFA) -> None:
 
 
 def _abrir_zip(fuente) -> zipfile.ZipFile:
-    """Abre el zip EN MEMORIA desde bytes o un file-like (no extrae a disco)."""
+    """Abre el zip EN Memoria desde bytes (no extrae a disco)."""
     if isinstance(fuente, (bytes, bytearray)):
         fuente = io.BytesIO(fuente)
     return zipfile.ZipFile(fuente)
@@ -225,9 +221,9 @@ def iterar_pofs_zip(zip_fuente, config: ConfigCSV | None = None,
                     errores: list | None = None) -> Iterator[PFA]:
     """
     Genera PFA recorriendo un .zip subido por el usuario (carpetas por MOEA en la
-    raiz). Recorre carpetas EXISTAN o no (recursivo, sin profundidad fija), salta
-    carpetas vacias, ignora todo lo que no sea .pof y la basura de Mac, valida
-    carpeta vs nombre (advertencia) y salta+reporta los .pof que fallen.
+    raiz). Recorre carpetas existan o no (recursivo), salta
+    carpetas vacias, ignora todo lo que no sea .pof, valida
+    carpeta vs nombre y reporta los .pof que fallen.
     """
     with _abrir_zip(zip_fuente) as zf:
         for info in zf.infolist():
@@ -250,11 +246,10 @@ def iterar_pofs_zip(zip_fuente, config: ConfigCSV | None = None,
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  Frentes de REFERENCIA (verdad de terreno por (MOP, m))
+#  Frentes de REFERENCIA 
 #
-#  Viven en MOEA-visualization-main/data/ y SOLO valen los que tienen el patron
-#  EXACTO {MOP}_{m:02d}D.pof. Los *_sf_*, SLD_*, INV_SLD_*, LINEAR_* son demo del
-#  doc: NO son frentes de referencia y se rechazan.
+#  Solo valen los que tienen el patron
+#  EXACTO {MOP}_{m:02d}D.pof. Los *_sf_*, SLD_*, INV_SLD_*, LINEAR_* se rechazan.
 # ─────────────────────────────────────────────────────────────────────────────
 # Carpeta por defecto (relativa a la raiz del repo: data/csv_io.py -> raiz).
 DIR_FRENTES_REF = Path(__file__).resolve().parents[1] / "MOEA-visualization-main" / "data"
@@ -267,8 +262,8 @@ DIR_FRENTES_REF = Path(__file__).resolve().parents[1] / "MOEA-visualization-main
 # lectura (los indicadores no lo mutan).
 _CACHE_FRENTES: dict[str, np.ndarray] = {}
 
-# Mapeo de nombre de MOP -> nombre del archivo de referencia. PENDIENTE confirmar
-# con el doc (VNT2/VNT3 no tienen archivo propio; se usan VIE2/VIE3).
+# Mapeo de nombre de MOP -> nombre del archivo de referencia. 
+# (VNT2/VNT3 no tienen archivo propio; se usan VIE2/VIE3).
 MAPEO_MOP_REF_DEFAULT = {"VNT2": "VIE2", "VNT3": "VIE3"}
 
 # Patron EXACTO de un frente de referencia: un solo guion bajo, sin sufijos.
@@ -278,7 +273,7 @@ _PREFIJOS_DEMO = ("SLD_", "INV_SLD_", "LINEAR_")
 
 
 def nombre_frente_referencia(mop: str, m: int, mapeo: dict | None = None) -> tuple[str, str]:
-    """Construye (nombre_archivo, mop_ref) para (MOP, m). Aplica el mapeo de nombres."""
+    """Construye (nombre_archivo, mop_ref) para (MOP, m) Aplica el mapeo de nombres."""
     mapeo = MAPEO_MOP_REF_DEFAULT if mapeo is None else mapeo
     mop_ref = mapeo.get(mop, mop)
     return f"{mop_ref}_{m:02d}D.pof", mop_ref
@@ -289,9 +284,8 @@ def _clave_override(override: dict | None, mop: str, m: int,
     """
     Clave con la que (MOP, m) empareja en el override del usuario, o None.
 
-    Prueba primero el token REAL (p. ej. VNT2) y despues el MAPEADO (VIE2): el
-    doc nombra esos archivos con el token VIE, asi que el zip del usuario puede
-    traerlos con cualquiera de los dos nombres. La clave literal tiene prioridad.
+    Prueba primero el token REAL (p. ej. VNT2) y despues el MAPEADO (VIE2): 
+    La clave literal tiene prioridad.
     """
     if override is None:
         return None
@@ -380,16 +374,13 @@ def leer_frente_referencia(mop: str, m: int, dir_ref=None,
     """
     Lee el frente de referencia de (MOP, m) -> matriz (R, m).
 
-    - PRIORIDAD del usuario (opcion A): si `override` trae (mop, m) — o la clave
-      MAPEADA (mop_ref, m), p. ej. un VIE2_03D.pof subido empareja con VNT2 —
-      devuelve ESE frente (el subido por el usuario) sin tocar la carpeta
-      automatica. La clave literal gana a la mapeada.
+    - PRIORIDAD del usuario (opcion A): si `override` trae (mop, m) o la clave
+      MAPEADA (mop_ref, m)
+      devuelve ESE frente (el subido por el usuario)
     - Si no, cae a la carpeta automatica como hoy (con mapeo VNT->VIE): acepta
       UNICAMENTE el patron exacto {MOP}_{m:02d}D.pof (rechaza sufijos y los prefijos
       de demo SLD_/INV_SLD_/LINEAR_). Si el archivo exacto no existe, lanza
-      FileNotFoundError: NO sustituye por uno aproximado.
-    - Las lecturas de disco se CACHEAN por ruta resuelta (ver _CACHE_FRENTES):
-      pedir el mismo frente otra vez no reparsea el archivo.
+      FileNotFoundError
     """
     clave = _clave_override(override, mop, m, mapeo)
     if clave is not None:
@@ -427,12 +418,10 @@ def cobertura_frentes_referencia(pares, dir_ref=None,
                                  ) -> list[dict]:
     """
     Dado un iterable de (MOP, m), reporta cuales tienen frente de referencia.
-    Devuelve una lista de dicts: {mop, m, mop_ref, archivo, disponible, origen}.
-
-    `origen` es "usuario" (viene de `override`, con PRIORIDAD) o "automatico" (de la
-    carpeta MOEA-visualization-main/data/). Para los del usuario, mop_ref es la
+    Devuelve una lista {mop, m, mop_ref, archivo, disponible, origen}.
+    `origen` es "usuario" o "automatico". Para los del usuario, mop_ref es la
     clave con la que emparejo el override: el token real si coincide directo, o
-    el MAPEADO (p. ej. VIE2 para VNT2) si el archivo se subio con el nombre del doc.
+    el MAPEADO (p. ej. VIE2 para VNT2) si el archivo se subio con el nombre.
     """
     dir_ref = Path(dir_ref) if dir_ref is not None else DIR_FRENTES_REF
     filas = []

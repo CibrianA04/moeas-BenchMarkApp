@@ -1,19 +1,17 @@
 # -*- coding: utf-8 -*-
 """
 Persistencia del proyecto en SQLite: snapshot de SESION.
-
 Guarda el estado ACTUAL del proyecto tal cual (PFAs, frentes de referencia del
 usuario, seleccion de indicadores y resultados ya evaluados) para retomarlo sin
 re-evaluar. NO guarda parametros de calculo (punto de referencia de HV, p de
 Dp, ...): la reproducibilidad completa queda fuera de este snapshot.
 
-Esquema (una tabla por tipo de dato, un solo archivo .sqlite):
-    meta(clave TEXT PK, valor TEXT)   -- nombre, paso, completado, ... como JSON
+Esquema una tabla por tipo de dato, un solo archivo .sqlite:
+    meta(clave TEXT PK, valor TEXT)   -- nombre, paso, completado, como JSON
     pfa(moea, mop, m, n, corrida, archivo, puntos BLOB)
     frente_ref(mop, m, puntos BLOB)
-    resultado(datos TEXT)             -- un dict de evaluacion.evaluar en JSON
-    omitido(datos TEXT)               -- un dict de 'omitidos' en JSON
-
+    resultado(datos TEXT)            
+    omitido(datos TEXT)               -
 Los ndarray se serializan con np.save (formato .npy: conserva forma y dtype)
 dentro de un BLOB. Este modulo trabaja con dicts PLANOS, sin dataclasses: la
 conversion de/hacia domain.model vive en la fachada domain/services.py, asi
